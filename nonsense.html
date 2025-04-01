@@ -22,12 +22,12 @@
   <h1>Would the fall never come to an end!</h1>
   <div id="container"></div>
   <script>
-    // Append a random digit (0-9) every 10ms to a single continuous string
+    // Append a random digit (0-9) every 1ms to a single continuous string
     setInterval(function(){
       var container = document.getElementById("container");
       var digit = Math.floor(Math.random() * 10);
       container.innerText += digit;
-    }, 10);
+    }, 1);
   </script>
 </body>
 </html>
