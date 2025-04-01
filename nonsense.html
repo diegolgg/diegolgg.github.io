@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nonsense</title>
+  <style>
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 16px;
+      background-color: #e8ebf0;
+      color: #222222;
+      margin: 1rem;
+    }
+    #container {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nonsense</h1>
+  <div id="container"></div>
+  <script>
+    // Append a new random number every 500ms
+    setInterval(function(){
+      var p = document.createElement("p");
+      p.textContent = Math.random().toFixed(6);
+      document.getElementById("container").appendChild(p);
+    }, 500);
+  </script>
+</body>
+</html>
