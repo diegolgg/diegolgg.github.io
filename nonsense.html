@@ -14,7 +14,6 @@
     #container {
       margin-top: 1rem;
       word-wrap: break-word;
-      font-family: "Times New Roman", Times, serif;
     }
   </style>
 </head>
@@ -22,11 +21,15 @@
   <h1>Would the fall never come to an end!</h1>
   <div id="container"></div>
   <script>
-    // Append a random digit (0-9) every 1ms to a single continuous string
-    setInterval(function(){
+    // Append a random number (between 1 and 20) of random digits every 1ms
+    setInterval(function() {
       var container = document.getElementById("container");
-      var digit = Math.floor(Math.random() * 10);
-      container.innerText += digit;
+      var n = Math.floor(Math.random() * 20) + 1; // random count between 1 and 20
+      var newDigits = "";
+      for (var i = 0; i < n; i++){
+        newDigits += Math.floor(Math.random() * 10).toString();
+      }
+      container.innerText += newDigits;
     }, 1);
   </script>
 </body>
