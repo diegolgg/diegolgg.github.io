@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Would the fall never come to an end?</title>
+  <title>Would the fall never come to an end!</title>
   <style>
     body {
       font-family: "Times New Roman", Times, serif;
@@ -13,7 +13,7 @@
     }
     #container {
       margin-top: 1rem;
-      word-wrap: break-word;
+      white-space: normal;
       font-family: "Times New Roman", Times, serif;
     }
   </style>
@@ -22,16 +22,16 @@
   <h1>Would the fall never come to an end!</h1>
   <div id="container"></div>
   <script>
-    // Append a random number (1 to 50) of random ASCII characters (from 33 to 126) every 1ms
+    // Append a random number (between 1 and 20) of random ASCII characters (33 to 126) every 1ms
     setInterval(function() {
       var container = document.getElementById("container");
-      var n = Math.floor(Math.random() * 50) + 1; // random count between 1 and 20
+      var n = Math.floor(Math.random() * 20) + 1; // random count between 1 and 20
       var newChars = "";
       for (var i = 0; i < n; i++){
          var charCode = Math.floor(Math.random() * (126 - 33 + 1)) + 33;
          newChars += String.fromCharCode(charCode);
       }
-      container.innerText += newChars;
+      container.textContent += newChars;
     }, 1);
   </script>
 </body>
