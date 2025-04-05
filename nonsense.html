@@ -16,7 +16,7 @@
       align-items: center;
       justify-content: center;
     }
-    /* Pre element fills the viewport with 20px margin on each side */
+    /* The pre element fills the viewport with a 20px margin on each side */
     #mandelbrot {
       margin: 20px;
       width: calc(100% - 40px);
@@ -32,7 +32,7 @@
 <body>
   <pre id="mandelbrot"></pre>
   <script>
-    // Compute an ASCII Mandelbrot set for a given viewport.
+    // Compute an ASCII Mandelbrot set for the given viewport.
     function mandelbrotAscii(width, height, maxIterations, centerX, centerY, scale) {
       let output = "";
       const xmin = centerX - scale / 2;
@@ -90,6 +90,18 @@
     let lastTime = performance.now();
     let aliceStarted = false;
     
+    // We'll load the full Alice in Wonderland text from an external file.
+    let aliceText = "";
+    fetch("alice.txt")
+      .then(response => response.text())
+      .then(text => {
+        aliceText = text;
+      })
+      .catch(err => {
+        console.error("Failed to load alice.txt:", err);
+        aliceText = "Error loading Alice in Wonderland text.";
+      });
+    
     // Use requestAnimationFrame for smoother fractal updates.
     function animate() {
       const currentTime = performance.now();
@@ -104,7 +116,7 @@
          } else {
            staticTime = 0;
          }
-         scale *= 0.95; // Zoom in by reducing scale by 5% per update.
+         scale *= 0.95; // Zoom in (reduce scale by 5% per update)
          lastTime = currentTime;
       }
       if (!aliceStarted) {
@@ -113,13 +125,6 @@
     }
     
     requestAnimationFrame(animate);
-    
-    // Alice in Wonderland text excerpt (sample; replace with full text if desired)
-    const aliceText = `Alice was beginning to get very tired of sitting by her sister on the bank, 
-and of having nothing to do: once or twice she had peeped into the book her sister was reading, 
-but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice, 
-'without pictures or conversations?' `;
-    let aliceIndex = 0;
     
     // When static for 5 seconds, start replacing the fractal with Alice text.
     function startAliceReplacement() {
@@ -141,8 +146,7 @@ but it had no pictures or conversations in it, 'and what is the use of a book,' 
       const aliceInterval = setInterval(function() {
          if (replacedCount < total) {
            // Replace one character in reading order with the next character from aliceText.
-           charArray[indices[replacedCount]] = aliceText.charAt(aliceIndex % aliceText.length);
-           aliceIndex++;
+           charArray[indices[replacedCount]] = aliceText.charAt(replacedCount % aliceText.length);
            replacedCount++;
          } else {
            replacedCount = 0; // Reset to loop replacements.
