@@ -13,128 +13,65 @@
       font-size: 16px;
       color: #222222;
     }
-    /* The pre element fills the viewport with a 20px margin */
-    #mandelbrot {
-      margin: 20px;
+    pre {
       white-space: pre;
       font-size: 16px;
       line-height: 1.2;
-      overflow: auto;
-      height: calc(100% - 40px); /* fill viewport minus margins */
-      width: calc(100% - 40px);
+      margin: 20px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
   <pre id="mandelbrot"></pre>
   <script>
-    // ASCII Mandelbrot renderer function.
     function mandelbrotAscii(width, height, maxIterations, centerX, centerY, scale) {
       let output = "";
-      const xmin = centerX - scale / 2;
-      const xmax = centerX + scale / 2;
-      const aspect = height / width;
-      const yRange = scale * aspect;
-      const ymin = centerY - yRange / 2;
-      const ymax = centerY + yRange / 2;
+      let xmin = centerX - scale / 2;
+      let xmax = centerX + scale / 2;
+      let aspect = height / width;
+      let yRange = scale * aspect;
+      let ymin = centerY - yRange / 2;
+      let ymax = centerY + yRange / 2;
       
       for (let j = 0; j < height; j++) {
-        const y0 = ymin + (j / (height - 1)) * (ymax - ymin);
-        for (let i = 0; i < width; i++) {
-          const x0 = xmin + (i / (width - 1)) * (xmax - xmin);
-          let x = 0, y = 0;
-          let iteration = 0;
-          while (x*x + y*y <= 4 && iteration < maxIterations) {
-            const xtemp = x*x - y*y + x0;
-            y = 2*x*y + y0;
-            x = xtemp;
-            iteration++;
-          }
-          const chars = " .:-=+*#%@";
-          const charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
-          output += chars.charAt(charIndex);
-        }
-        output += "\n";
+         let y0 = ymin + (j / (height - 1)) * (ymax - ymin);
+         for (let i = 0; i < width; i++) {
+            let x0 = xmin + (i / (width - 1)) * (xmax - xmin);
+            let x = 0, y = 0;
+            let iteration = 0;
+            while (x*x + y*y <= 4 && iteration < maxIterations) {
+              let xtemp = x*x - y*y + x0;
+              y = 2*x*y + y0;
+              x = xtemp;
+              iteration++;
+            }
+            // Finer gradient with 20 characters:
+            const chars = " .,:;i1tfLCG08@#%&*~";
+            let charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
+            output += chars.charAt(charIndex);
+         }
+         output += "\n";
       }
       return output;
     }
     
-    // Parameters for the fractal animation.
-    const width = 120;         // columns
-    const height = 40;         // rows
-    let scale = 3.5;           // initial horizontal range
-    const baseIterations = 50; // base max iterations
-    const centerX = -1.25;     // zoom center (edge region)
+    // Parameters for dynamic zoom into a fractal region.
+    let scale = 3.5;
+    const width = 120;
+    const height = 40;
+    const baseIterations = 50;
+    const centerX = -1.25;
     const centerY = 0.02;
     const container = document.getElementById("mandelbrot");
     
-    // We'll consider the fractal "static" when scale < threshold.
-    const staticThreshold = 0.0001;
-    let staticTime = 0;       // time (in ms) the fractal has remained static
-    let fractalInterval;
-    let aliceInterval;
-    let aliceStarted = false;
-    
-    // Fractal render function.
-    function renderFractal() {
-      // Increase iterations as scale decreases.
-      const currentMax = Math.floor(baseIterations * (3.5 / scale));
-      const newContent = mandelbrotAscii(width, height, currentMax, centerX, centerY, scale);
-      container.textContent = newContent;
-      
-      // If scale is below threshold, assume the fractal is uniform.
-      if (scale < staticThreshold) {
-        staticTime += 20; // update interval is 20ms
-      } else {
-        staticTime = 0;
-      }
-      
-      scale *= 0.95; // Zoom in by 5% every update
-      
-      if (staticTime >= 5000 && !aliceStarted) {
-        aliceStarted = true;
-        clearInterval(fractalInterval);
-        startAliceReplacement();
-      }
+    function render() {
+      let currentMax = Math.floor(baseIterations * (3.5 / scale));
+      container.textContent = mandelbrotAscii(width, height, currentMax, centerX, centerY, scale);
+      scale *= 0.95;
     }
     
-    // Start fractal animation, update every 20ms.
-    fractalInterval = setInterval(renderFractal, 100);
-    
-    // Alice in Wonderland text (sample excerpt; replace with full text if desired)
-    const aliceText = `Alice was beginning to get very tired of sitting by her sister on the bank, 
-and of having nothing to do: once or twice she had peeped into the book her sister was reading, 
-but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice, 
-'without pictures or conversations?' `;
-    
-    // startAliceReplacement: gradually replaces the fractal block with Alice text.
-    function startAliceReplacement() {
-      // Get current block as an array of characters.
-      let content = container.textContent;
-      let charArray = content.split("");
-      // Build an array of indices for replaceable (non-newline) characters.
-      const indices = [];
-      for (let i = 0; i < charArray.length; i++) {
-        if (charArray[i] !== "\n") {
-          indices.push(i);
-        }
-      }
-      let replacedCount = 0;
-      const total = indices.length;
-      
-      // Every 20ms, replace one or more characters in order.
-      aliceInterval = setInterval(function() {
-        // Replace one character per iteration (or more if desired)
-        if (replacedCount < total) {
-          charArray[indices[replacedCount]] = aliceText.charAt(replacedCount % aliceText.length);
-          replacedCount++;
-        } else {
-          // Once all characters have been replaced, loop back to the top.
-          replacedCount = 0;
-        }
-        container.textContent = charArray.join("");
-      }, 20);
-    }
+    setInterval(render, 100);
   </script>
 </body>
 </html>
