@@ -7,34 +7,47 @@
     body {
       font-family: "Times New Roman", Times, serif;
       font-size: 16px;
-      background-color: #e8ebf0;
-      color: #222222;
+      background-color: #fff;
+      color: #000;
       margin: 1rem;
     }
-    #container {
-      margin-top: 1rem;
-      white-space: normal;
-      overflow-wrap: break-word;
-      word-break: break-all;
-      font-family: "Times New Roman", Times, serif;
+    pre {
+      white-space: pre;
+      font-size: 16px;
+      line-height: 1.2;
     }
   </style>
 </head>
 <body>
   <h1>Would the fall never come to an end!</h1>
-  <div id="container"></div>
+  <pre id="mandelbrot"></pre>
   <script>
-    // Append a random number (between 1 and 20) of random ASCII characters (from 33 to 126) every 1ms
-    setInterval(function() {
-      var container = document.getElementById("container");
-      var n = Math.floor(Math.random() * 20) + 1; // random count between 1 and 20
-      var newChars = "";
-      for (var i = 0; i < n; i++){
-         var charCode = Math.floor(Math.random() * (126 - 33 + 1)) + 33;
-         newChars += String.fromCharCode(charCode);
+    function mandelbrotAscii(width, height, maxIterations) {
+      let output = "";
+      const xmin = -2.5, xmax = 1;
+      const ymin = -1, ymax = 1;
+      for (let j = 0; j < height; j++) {
+         let y0 = ymin + (j / (height - 1)) * (ymax - ymin);
+         for (let i = 0; i < width; i++) {
+            let x0 = xmin + (i / (width - 1)) * (xmax - xmin);
+            let x = 0, y = 0;
+            let iteration = 0;
+            while (x*x + y*y <= 4 && iteration < maxIterations) {
+              let xtemp = x*x - y*y + x0;
+              y = 2*x*y + y0;
+              x = xtemp;
+              iteration++;
+            }
+            // Map iteration to a character
+            const chars = " .:-=+*#%@";
+            let charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
+            output += chars.charAt(charIndex);
+         }
+         output += "\n";
       }
-      container.textContent += newChars;
-    }, 1);
+      return output;
+    }
+    document.getElementById("mandelbrot").textContent = mandelbrotAscii(80, 40, 50);
   </script>
 </body>
 </html>
