@@ -13,40 +13,25 @@
       font-size: 16px;
       color: #222222;
     }
-    /* Centered heading at the top */
-    h1 {
-      text-align: center;
-      margin-top: 20px;
-      margin-bottom: 10px;
-    }
-    /* The mandelbrot pre element fills the viewport with a 20px margin */
-    #mandelbrot {
-      position: absolute;
-      top: 20px;   /* 20px margin from top */
-      left: 20px;  /* 20px margin from left */
-      right: 20px; /* 20px margin from right */
-      bottom: 20px;/* 20px margin from bottom */
+    pre {
       white-space: pre;
-      overflow: auto;
       font-size: 16px;
       line-height: 1.2;
+      margin: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>Would the fall never come to an end!</h1>
   <pre id="mandelbrot"></pre>
   <script>
-    // Function to compute an ASCII Mandelbrot set for a given viewport
     function mandelbrotAscii(width, height, maxIterations, centerX, centerY, scale) {
       let output = "";
-      const xmin = centerX - scale / 2;
-      const xmax = centerX + scale / 2;
-      // Adjust vertical boundaries based on aspect ratio
-      const aspect = height / width;
-      const yRange = scale * aspect;
-      const ymin = centerY - yRange / 2;
-      const ymax = centerY + yRange / 2;
+      let xmin = centerX - scale / 2;
+      let xmax = centerX + scale / 2;
+      let aspect = height / width;
+      let yRange = scale * aspect;
+      let ymin = centerY - yRange / 2;
+      let ymax = centerY + yRange / 2;
       
       for (let j = 0; j < height; j++) {
          let y0 = ymin + (j / (height - 1)) * (ymax - ymin);
@@ -54,13 +39,12 @@
             let x0 = xmin + (i / (width - 1)) * (xmax - xmin);
             let x = 0, y = 0;
             let iteration = 0;
-            while (x * x + y * y <= 4 && iteration < maxIterations) {
-              let xtemp = x * x - y * y + x0;
-              y = 2 * x * y + y0;
+            while (x*x + y*y <= 4 && iteration < maxIterations) {
+              let xtemp = x*x - y*y + x0;
+              y = 2*x*y + y0;
               x = xtemp;
               iteration++;
             }
-            // Map the iteration count to a character from a set of ASCII characters
             const chars = " .:-=+*#%@";
             let charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
             output += chars.charAt(charIndex);
@@ -70,22 +54,22 @@
       return output;
     }
     
-    // Initial parameters for the zoomed Mandelbrot region (adjust as needed)
+    // Parameters for the dynamic zoom
     let scale = 3.5;
-    const width = 120;  // Wider output to resemble a classical Mandelbrot shape
+    const width = 120;
     const height = 40;
-    const maxIterations = 50;
-    const centerX = -0.75; // Zoom into an interesting edge region
-    const centerY = 0.1;
+    const baseIterations = 50;
+    const centerX = -1.25;
+    const centerY = 0.02;
     const container = document.getElementById("mandelbrot");
     
-    // Render and zoom
     function render() {
-      container.textContent = mandelbrotAscii(width, height, maxIterations, centerX, centerY, scale);
-      scale *= 0.99; // Zoom in by reducing the scale gradually
+      let currentMax = Math.floor(baseIterations * (3.5 / scale));
+      container.textContent = mandelbrotAscii(width, height, currentMax, centerX, centerY, scale);
+      scale *= 0.98; // Zoom in 5% per update
     }
     
-    setInterval(render, 100);
+    setInterval(render, 20); // Update every 20ms
   </script>
 </body>
 </html>
