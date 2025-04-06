@@ -15,10 +15,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-direction: column; /* allow vertical stacking */
     }
-    /* The pre element fills the viewport with a 20px margin on each side */
+    /* The pre element fills the viewport with a 20px margin on each side,
+       with extra top margin for vertical spacing */
     #mandelbrot {
-      margin: 20px;
+      margin: 60px 20px 20px 20px;  /* top margin increased to 40px */
       width: calc(100% - 40px);
       height: calc(100% - 40px);
       white-space: pre;   /* initially, preserve formatting */
@@ -32,7 +34,7 @@
 <body>
   <pre id="mandelbrot"></pre>
   <script>
-    // Compute an ASCII Mandelbrot set for the given viewport.
+    // Compute an ASCII Mandelbrot set for a given viewport.
     function mandelbrotAscii(width, height, maxIterations, centerX, centerY, scale) {
       let output = "";
       const xmin = centerX - scale / 2;
@@ -90,18 +92,6 @@
     let lastTime = performance.now();
     let aliceStarted = false;
     
-    // We'll load the full Alice in Wonderland text from an external file.
-    let aliceText = "";
-    fetch("alice.txt")
-      .then(response => response.text())
-      .then(text => {
-        aliceText = text;
-      })
-      .catch(err => {
-        console.error("Failed to load alice.txt:", err);
-        aliceText = "Error loading Alice in Wonderland text.";
-      });
-    
     // Use requestAnimationFrame for smoother fractal updates.
     function animate() {
       const currentTime = performance.now();
@@ -126,33 +116,42 @@
     
     requestAnimationFrame(animate);
     
+    // Load full Alice in Wonderland text from external file.
+    let aliceText = "";
+    fetch("alice.txt")
+      .then(response => response.text())
+      .then(text => {
+        aliceText = text;
+      })
+      .catch(err => {
+        console.error("Failed to load alice.txt:", err);
+        aliceText = "Error loading Alice in Wonderland text.";
+      });
+    
+    let aliceIndex = 0;
+    
     // When static for 5 seconds, start replacing the fractal with Alice text.
     function startAliceReplacement() {
       // Change alignment to left and allow full width wrapping.
       container.style.textAlign = "left";
       container.style.whiteSpace = "pre-wrap";
       
-      let content = container.textContent;
+      // Remove newline characters from current content to form one continuous string.
+      let content = container.textContent.replace(/\n/g, ' ');
       let charArray = content.split("");
-      // Collect indices of all replaceable (non-newline) characters.
-      let indices = [];
-      for (let i = 0; i < charArray.length; i++) {
-        if (charArray[i] !== "\n") {
-          indices.push(i);
-        }
-      }
+      const total = charArray.length;
       let replacedCount = 0;
-      const total = indices.length;
+      
       const aliceInterval = setInterval(function() {
          if (replacedCount < total) {
-           // Replace one character in reading order with the next character from aliceText.
-           charArray[indices[replacedCount]] = aliceText.charAt(replacedCount % aliceText.length);
+           // Replace one character in reading order with the corresponding character from aliceText.
+           charArray[replacedCount] = aliceText.charAt(replacedCount % aliceText.length);
            replacedCount++;
          } else {
-           replacedCount = 0; // Reset to loop replacements.
+           replacedCount = 0; // Loop back to the beginning.
          }
          container.textContent = charArray.join("");
-      }, 10);
+      }, 20);
     }
     
     // Check every 100ms if the fractal has been static for 5 seconds.
