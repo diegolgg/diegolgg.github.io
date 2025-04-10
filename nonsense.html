@@ -22,11 +22,11 @@
       margin: 20px;
       width: calc(100% - 40px);
       height: calc(100% - 40px);
-      white-space: pre-wrap;   /* allow wrapping as needed */
+      white-space: pre-wrap;  /* allow wrapping */
       font-size: 16px;
       line-height: 1.2;
       overflow: auto;
-      text-align: center; /* initially centered */
+      text-align: center; /* initial fractal output is centered */
     }
   </style>
 </head>
@@ -34,6 +34,7 @@
   <pre id="mandelbrot"></pre>
   <script>
     // Compute an ASCII Julia set for the given viewport.
+    // Using a fixed c = -0.8 + 0.156i parameter.
     function juliaAscii(width, height, maxIterations, cReal, cImag, scale, centerX, centerY) {
       let output = "";
       const xmin = centerX - scale / 2;
@@ -42,7 +43,7 @@
       const yRange = scale * aspect;
       const ymin = centerY - yRange / 2;
       const ymax = centerY + yRange / 2;
-      // Finer gradient: from lightest to densest.
+      // Finer ASCII gradient: from lightest to densest.
       const chars = " .:-=+*#%@&";
       for (let j = 0; j < height; j++) {
         const y0 = ymin + (j / (height - 1)) * (ymax - ymin);
@@ -56,7 +57,7 @@
             x = xtemp;
             iteration++;
           }
-          // Output a space for points that remain inside.
+          // If the point remains "inside" (max iterations reached), output a space.
           if (iteration === maxIterations) {
             output += " ";
           } else {
@@ -72,10 +73,10 @@
     // Helper: Checks if text (ignoring newlines) is uniform.
     function isUniform(text) {
       const filtered = text.replace(/\n/g, '');
-      if(filtered.length === 0) return true;
+      if (filtered.length === 0) return true;
       const first = filtered.charAt(0);
-      for(let i = 1; i < filtered.length; i++){
-        if(filtered.charAt(i) !== first) return false;
+      for (let i = 1; i < filtered.length; i++) {
+        if (filtered.charAt(i) !== first) return false;
       }
       return true;
     }
@@ -84,43 +85,44 @@
     const width = 120;         // columns
     const height = 40;         // rows
     let scale = 3.5;           // initial horizontal range
-    const baseIterations = 50;
-    // Julia set fixed parameter.
+    const baseIterations = 50; // base iteration count
+    // Fixed parameter for Julia set.
     const cReal = -0.8;
     const cImag = 0.156;
-    // Center the view at (0, 0).
+    // Center view at (0, 0).
     const centerX = 0.0;
     const centerY = 0.0;
     const container = document.getElementById("mandelbrot");
     
     let lastTime = performance.now();
     let staticTime = 0;
-    const staticThreshold = 5000; // 5 seconds (ms)
+    const staticThreshold = 5000; // 5 seconds in ms
     let aliceStarted = false;
     
     function animate() {
       const currentTime = performance.now();
       const elapsed = currentTime - lastTime;
-      if(elapsed >= 20) {
+      if (elapsed >= 20) { // update every ~20ms
          const currentMax = Math.floor(baseIterations * (3.5 / scale));
          const fractalOutput = juliaAscii(width, height, currentMax, cReal, cImag, scale, centerX, centerY);
          container.textContent = fractalOutput;
-         if(isUniform(fractalOutput)) {
+         // If the output is uniform, accumulate static time.
+         if (isUniform(fractalOutput)) {
            staticTime += elapsed;
          } else {
            staticTime = 0;
          }
-         scale *= 0.98;
+         scale *= 0.98; // Slight zoom in.
          lastTime = currentTime;
       }
-      if(!aliceStarted) {
+      if (!aliceStarted) {
          requestAnimationFrame(animate);
       }
     }
     
     requestAnimationFrame(animate);
     
-    // Load Alice text from an external file.
+    // Load full Alice in Wonderland text from external file "alice.txt".
     let aliceText = "";
     fetch("alice.txt")
       .then(response => response.text())
@@ -131,31 +133,37 @@
         console.error("Failed to load alice.txt:", err);
         aliceText = "Error loading Alice in Wonderland text.";
       });
-      
-    // When static for 5 seconds, begin replacement.
+    
+    let aliceIndex = 0;
+    
+    // When the fractal output stays uniform for 5 seconds, start replacing it with Alice text.
     function startAliceReplacement() {
-      // We no longer change textAlign or whiteSpace; we keep the container's styling, so the text appears in the same box.
-      // Remove newlines from current content (so that the Alice text can wrap naturally at container width).
+      // Set text alignment to left; this "uncenters" the text.
+      container.style.textAlign = "left";
+      container.style.whiteSpace = "pre-wrap";  // Allow wrapping at the container's boundaries.
+      container.style.fontFamily = '"Times New Roman", Times, serif'; // Ensure Times New Roman
+      
+      // Remove newline characters from the current content to get a continuous string.
       let content = container.textContent.replace(/\n/g, ' ');
       let charArray = content.split("");
       const total = charArray.length;
       let replacedCount = 0;
       
       const aliceInterval = setInterval(function() {
-         if(replacedCount < total) {
-           // Replace one character in reading order with a character from aliceText.
+         if (replacedCount < total) {
+           // Replace one character in reading order with the next character from aliceText.
            charArray[replacedCount] = aliceText.charAt(replacedCount % aliceText.length);
            replacedCount++;
          } else {
-           replacedCount = 0;
+           replacedCount = 0; // Loop back to the beginning.
          }
          container.textContent = charArray.join("");
       }, 20);
     }
     
-    // Check every 100ms if output is static for 5 seconds.
+    // Check every 100ms if static time has reached the threshold.
     setInterval(function() {
-      if(staticTime >= staticThreshold && !aliceStarted) {
+      if (staticTime >= staticThreshold && !aliceStarted) {
          aliceStarted = true;
          startAliceReplacement();
       }
