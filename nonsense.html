@@ -35,7 +35,7 @@ var canvas = document.getElementById("saffCanvas"), ctx = canvas.getContext("2d"
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 var Nx = 80, Ny = 80, sx = Nx+2, sy = Ny+2;
 function IX(i,j){ return i+j*sx; }
-var dt = 0.05, diff = 0.0003, visc = 0.0008;
+var dt = 0.05, diff = 0.00005, visc = 0.0008;
 var u = new Float32Array(sx*sy), v = new Float32Array(sx*sy),
     u0 = new Float32Array(sx*sy), v0 = new Float32Array(sx*sy);
 var dens = new Float32Array(sx*sy), dens0 = new Float32Array(sx*sy);
@@ -87,7 +87,7 @@ function advect(b,d,d0,u,v,dt){
    if(y<0.5)y=0.5; if(y>Ny+0.5)y=Ny+0.5;
    var j0=Math.floor(y), j1=j0+1;
    var s1=x-i0, s0=1-s1, t1=y-j0, t0=1-t1;
-   d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)] + t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)] + t1*d0[IX(i1,j1)]);
+   d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
   }
  }
  set_bnd(b,d);
@@ -95,7 +95,7 @@ function advect(b,d,d0,u,v,dt){
 function project(u,v,p,div){
  for(var j=1;j<=Ny;j++){
   for(var i=1;i<=Nx;i++){
-   div[IX(i,j)] = -0.5*(u[IX(i+1,j)]-u[IX(i-1,j)] + v[IX(i,j+1)]-v[IX(i,j-1)])/Nx;
+   div[IX(i,j)] = -0.5*(u[IX(i+1,j)]-u[IX(i-1,j)]+v[IX(i,j+1)]-v[IX(i,j-1)])/Nx;
    p[IX(i,j)] = 0;
   }
  }
@@ -134,10 +134,10 @@ function density_step(x,x0,u,v,diff,dt){
 }
 function inject(){
   for(var j=1;j<=Ny;j++){
-    if(Math.random()<0.5){
+    if(Math.random()<0.7){
       var idx = IX(1,j);
       u[idx] = 2.5 + (Math.random()-0.5)*1.0;
-      dens[idx] = 0.25 + (Math.random()-0.5)*0.1;
+      dens[idx] = 0.25 + (Math.random()-0.5)*0.05;
     }
   }
 }
