@@ -1,173 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>nonsense</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      background-color: #e8ebf0;
-      font-family: "Times New Roman", Times, serif;
-      font-size: 16px;
-      color: #222222;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-    /* The pre element fills the viewport with a 20px margin on each side */
-    #mandelbrot {
-      margin: 20px;
-      width: calc(100% - 40px);
-      height: calc(100% - 40px);
-      white-space: pre-wrap;  /* allow wrapping */
-      font-size: 16px;
-      line-height: 1.2;
-      overflow: auto;
-      text-align: center; /* initial fractal output is centered */
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Nonsense</title>
+<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  background: #fafafa url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D'800'%20height%3D'800'%20xmlns%3D'http%3A//www.w3.org/2000/svg'%3E%3Crect%20width%3D'800'%20height%3D'800'%20fill%3D'%23ffffff'%20/%3E%3Ctext%20x%3D'50'%20y%3D'100'%20fill%3D'%23cccccc'%20font-size%3D'20'%20font-family%3D'serif'%3E%20Saffman-Taylor%20Instability%20Background%3C/text%3E%3Ctext%20x%3D'50'%20y%3D'130'%20fill%3D'%23cccccc'%20font-size%3D'14'%20font-family%3D'serif'%3E%20An%20example%20of%20viscous%20fingering%20in%20a%20Hele-Shaw%20cell.%3C/text%3E%3Ctext%20x%3D'50'%20y%3D'160'%20fill%3D'%23cccccc'%20font-size%3D'14'%20font-family%3D'serif'%3E%20%20...%20%28Wikipedia%20description%29%3C/text%3E%3C/svg%3E") repeat;
+  background-size: cover;
+}
+</style>
 </head>
 <body>
-  <pre id="mandelbrot"></pre>
-  <script>
-    // Compute an ASCII Julia set for the given viewport.
-    // Using a fixed c = -0.8 + 0.156i parameter.
-    function juliaAscii(width, height, maxIterations, cReal, cImag, scale, centerX, centerY) {
-      let output = "";
-      const xmin = centerX - scale / 2;
-      const xmax = centerX + scale / 2;
-      const aspect = height / width;
-      const yRange = scale * aspect;
-      const ymin = centerY - yRange / 2;
-      const ymax = centerY + yRange / 2;
-      // Finer ASCII gradient: from lightest to densest.
-      const chars = " .:-=+*#%@&";
-      for (let j = 0; j < height; j++) {
-        const y0 = ymin + (j / (height - 1)) * (ymax - ymin);
-        for (let i = 0; i < width; i++) {
-          const x0 = xmin + (i / (width - 1)) * (xmax - xmin);
-          let x = x0, y = y0;
-          let iteration = 0;
-          while (x * x + y * y <= 4 && iteration < maxIterations) {
-            let xtemp = x * x - y * y + cReal;
-            y = 2 * x * y + cImag;
-            x = xtemp;
-            iteration++;
-          }
-          // If the point remains "inside" (max iterations reached), output a space.
-          if (iteration === maxIterations) {
-            output += " ";
-          } else {
-            let charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
-            output += chars.charAt(charIndex);
-          }
-        }
-        output += "\n";
-      }
-      return output;
-    }
-    
-    // Helper: Checks if text (ignoring newlines) is uniform.
-    function isUniform(text) {
-      const filtered = text.replace(/\n/g, '');
-      if (filtered.length === 0) return true;
-      const first = filtered.charAt(0);
-      for (let i = 1; i < filtered.length; i++) {
-        if (filtered.charAt(i) !== first) return false;
-      }
-      return true;
-    }
-    
-    // Animation parameters.
-    const width = 120;         // columns
-    const height = 40;         // rows
-    let scale = 3.5;           // initial horizontal range
-    const baseIterations = 50; // base iteration count
-    // Fixed parameter for Julia set.
-    const cReal = -0.8;
-    const cImag = 0.156;
-    // Center view at (0, 0).
-    const centerX = 0.0;
-    const centerY = 0.0;
-    const container = document.getElementById("mandelbrot");
-    
-    let lastTime = performance.now();
-    let staticTime = 0;
-    const staticThreshold = 5000; // 5 seconds in ms
-    let aliceStarted = false;
-    
-    function animate() {
-      const currentTime = performance.now();
-      const elapsed = currentTime - lastTime;
-      if (elapsed >= 20) { // update every ~20ms
-         const currentMax = Math.floor(baseIterations * (3.5 / scale));
-         const fractalOutput = juliaAscii(width, height, currentMax, cReal, cImag, scale, centerX, centerY);
-         container.textContent = fractalOutput;
-         // If the output is uniform, accumulate static time.
-         if (isUniform(fractalOutput)) {
-           staticTime += elapsed;
-         } else {
-           staticTime = 0;
-         }
-         scale *= 0.98; // Slight zoom in.
-         lastTime = currentTime;
-      }
-      if (!aliceStarted) {
-         requestAnimationFrame(animate);
-      }
-    }
-    
-    requestAnimationFrame(animate);
-    
-    // Load full Alice in Wonderland text from external file "alice.txt".
-    let aliceText = "";
-    fetch("alice.txt")
-      .then(response => response.text())
-      .then(text => {
-        aliceText = text;
-      })
-      .catch(err => {
-        console.error("Failed to load alice.txt:", err);
-        aliceText = "Error loading Alice in Wonderland text.";
-      });
-    
-    let aliceIndex = 0;
-    
-    // When the fractal output stays uniform for 5 seconds, start replacing it with Alice text.
-    function startAliceReplacement() {
-      // Set text alignment to left; this "uncenters" the text.
-      container.style.textAlign = "left";
-      container.style.whiteSpace = "pre-wrap";  // Allow wrapping at the container's boundaries.
-      container.style.fontFamily = '"Times New Roman", Times, serif'; // Ensure Times New Roman
-      
-      // Remove newline characters from the current content to get a continuous string.
-      let content = container.textContent.replace(/\n/g, ' ');
-      let charArray = content.split("");
-      const total = charArray.length;
-      let replacedCount = 0;
-      
-      const aliceInterval = setInterval(function() {
-         if (replacedCount < total) {
-           // Replace one character in reading order with the next character from aliceText.
-           charArray[replacedCount] = aliceText.charAt(replacedCount % aliceText.length);
-           replacedCount++;
-         } else {
-           replacedCount = 0; // Loop back to the beginning.
-         }
-         container.textContent = charArray.join("");
-      }, 20);
-    }
-    
-    // Check every 100ms if static time has reached the threshold.
-    setInterval(function() {
-      if (staticTime >= staticThreshold && !aliceStarted) {
-         aliceStarted = true;
-         startAliceReplacement();
-      }
-    }, 100);
-  </script>
+<div class="main-wrapper">
+<div class="header-container">
+<div class="header-left">
+<h1 class="name">Nonsense</h1>
+</div>
+</div>
+<section class="section" style="margin-top:1rem;">
+<div class="blog-post" style="border:1px solid #ccc; border-radius:4px; padding:1rem; margin-bottom:1rem; cursor:pointer;" onclick="toggleContent('content1')">
+<h2 style="margin-bottom:0.5rem;">Today’s Musings</h2>
+<div id="content1" style="display:none; margin-top:0.5rem;">
+<p>This is a blog-post style section about what I’m doing right now. Click the title again to hide this content. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam consectetur sapien in magna gravida convallis. Pellentesque varius eget ex sed facilisis. Morbi nec nibh leo. Aenean fermentum efficitur metus. Quisque malesuada, sapien in ullamcorper placerat, risus nulla facilisis mauris, sit amet accumsan elit tortor vel dolor.</p>
+</div>
+</div>
+<div class="blog-post" style="border:1px solid #ccc; border-radius:4px; padding:1rem; margin-bottom:1rem; cursor:pointer;" onclick="toggleContent('content2')">
+<h2 style="margin-bottom:0.5rem;">Another Update</h2>
+<div id="content2" style="display:none; margin-top:0.5rem;">
+<p>Here I may share more thoughts or commentary in a collapsible format. Click the title again to hide this content. Maecenas id elit eros. Donec tincidunt est non ex aliquam, nec tristique magna pretium. Vivamus luctus egestas molestie. Donec at sapien sollicitudin, volutpat risus et, tincidunt leo. Mauris eu mi velit. Quisque congue libero eu nunc elementum, sit amet blandit massa blandit.</p>
+</div>
+</div>
+</section>
+</div>
+<script>
+function toggleContent(id){
+ var el=document.getElementById(id);
+ if(el.style.display==="none")el.style.display="block";else el.style.display="none";
+}
+</script>
 </body>
 </html>
