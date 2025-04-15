@@ -7,11 +7,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { background: #fff; }
-#chCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+#dlaCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
 </style>
 </head>
 <body>
-<canvas id="chCanvas"></canvas>
+<canvas id="dlaCanvas"></canvas>
 <div class="blog-container">
   <div class="blog-post" onclick="toggleContent('post1')">
     <h2>Today’s Musings</h2>
@@ -29,93 +29,67 @@ body { background: #fff; }
 <script>
 function toggleContent(id){
   var el = document.getElementById(id);
-  el.style.display = (el.style.display==="none"||el.style.display==="") ? "block" : "none";
+  el.style.display = (el.style.display==="none"||el.style.display==="")?"block":"none";
 }
-var canvas = document.getElementById("chCanvas"), ctx = canvas.getContext("2d");
+var canvas = document.getElementById("dlaCanvas"), ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-var NX = 80, NY = 80;
-var phi = new Float32Array(NX*NY), phi0 = new Float32Array(NX*NY);
-var dt = 0.0005, epsilon = 0.01;
+var NX = 200, NY = 200;
+var grid = new Array(NX*NY);
+for(var i=0;i<grid.length;i++) grid[i] = 0;
 function idx(i,j){ return i+j*NX; }
-for(var j=0;j<NY;j++){
-  for(var i=0;i<NX;i++){
-    phi[idx(i,j)] = -1;
-    phi0[idx(i,j)] = -1;
+var centerX = Math.floor(NX/2), centerY = Math.floor(NY/2);
+grid[idx(centerX,centerY)] = 1;
+var walkers = [];
+function spawnWalkers(n){
+  for(var k=0;k<n;k++){
+    var angle = Math.random()*2*Math.PI;
+    var r = Math.floor(Math.max(NX,NY)/2);
+    var x = Math.floor(centerX + r*Math.cos(angle));
+    var y = Math.floor(centerY + r*Math.sin(angle));
+    walkers.push({x: x, y: y});
   }
 }
-for(var j=0;j<NY;j++){
-  for(var i=0;i<5;i++){
-    phi[idx(i,j)] = 1;
-    phi0[idx(i,j)] = 1;
-  }
-}
-function laplacianPhi(phi,i,j){
-  return phi[idx(i-1,j)] + phi[idx(i+1,j)] + phi[idx(i,j-1)] + phi[idx(i,j+1)] - 4*phi[idx(i,j)];
-}
-function updateCH(){
-  for(var j=1;j<NY-1;j++){
-    for(var i=1;i<NX-1;i++){
-      var id = idx(i,j);
-      var lap = laplacianPhi(phi,i,j);
-      var mu = Math.pow(phi[id],3) - phi[id] - epsilon * lap;
-      phi0[id] = phi[id] + dt * laplacianPhi({idx: function(a,b){ return phi[idx(a,b)]; }}, i, j); 
-      // Instead, update using Cahn-Hilliard form: φ_t = ∇²(mu)
-      // For simplicity, we approximate ∇²(mu) using laplacian on mu computed from local phi values.
-      var lapMu = 0;
-      lapMu = ( ( Math.pow(phi[idx(i-1,j)],3)-phi[idx(i-1,j)] - epsilon*(laplacianPhi(phi,i-1,j) ) )
-              + ( Math.pow(phi[idx(i+1,j)],3)-phi[idx(i+1,j)] - epsilon*(laplacianPhi(phi,i+1,j) ) )
-              + ( Math.pow(phi[idx(i,j-1)],3)-phi[idx(i,j-1)] - epsilon*(laplacianPhi(phi,i,j-1) ) )
-              + ( Math.pow(phi[idx(i,j+1)],3)-phi[idx(i,j+1)] - epsilon*(laplacianPhi(phi,i,j+1) ) ) - 4*(Math.pow(phi[id],3)-phi[id] - epsilon*lap) )/4;
-      phi0[id] = phi[id] + dt * lapMu;
+function updateWalkers(){
+  for(var k = walkers.length-1;k>=0;k--){
+    var w = walkers[k];
+    var direction = Math.floor(Math.random()*4);
+    if(direction===0) w.x++;
+    else if(direction===1) w.x--;
+    else if(direction===2) w.y++;
+    else if(direction===3) w.y--;
+    if(w.x<1) w.x=1; if(w.x>=NX-1) w.x=NX-2;
+    if(w.y<1) w.y=1; if(w.y>=NY-1) w.y=NY-2;
+    // If any neighbor is occupied, stick here.
+    if(grid[idx(w.x-1,w.y)]===1 || grid[idx(w.x+1,w.y)]===1 ||
+       grid[idx(w.x,w.y-1)]===1 || grid[idx(w.x,w.y+1)]===1){
+      grid[idx(w.x,w.y)] = 1;
+      walkers.splice(k,1);
     }
   }
-  for(var j=1;j<NY-1;j++){
-    for(var i=1;i<NX-1;i++){
-      phi[idx(i,j)] = phi0[idx(i,j)];
-    }
-  }
-  for(var j=0;j<NY;j++){
-    phi[idx(0,j)] = phi[idx(1,j)];
-    phi[idx(NX-1,j)] = phi[idx(NX-2,j)];
-  }
-  for(var i=0;i<NX;i++){
-    phi[idx(i,0)] = phi[idx(i,1)];
-    phi[idx(i,NY-1)] = phi[idx(i,NY-2)];
-  }
 }
-function renderCH(){
-  var cellW = canvas.width/NX, cellH = canvas.height/NY;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function renderDLA(){
+  var imgData = ctx.createImageData(canvas.width, canvas.height);
+  var data = imgData.data;
   for(var j=0;j<NY;j++){
     for(var i=0;i<NX;i++){
-      var val = phi[idx(i,j)];
-      var norm = (val+1)/2;
-      var rgb = acColor(norm);
-      ctx.fillStyle = "rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+")";
-      ctx.fillRect(i*cellW,j*cellH,cellW,cellH);
+      var col = grid[idx(i,j)]===1 ? 80 : 255;
+      var x = Math.floor(i*canvas.width/NX), y = Math.floor(j*canvas.height/NY);
+      var pos = (y*canvas.width + x)*4;
+      data[pos] = col;
+      data[pos+1] = col;
+      data[pos+2] = 255;
+      data[pos+3] = 255;
     }
   }
+  ctx.putImageData(imgData,0,0);
 }
-function acColor(norm){
-  var hue = 220;
-  var sat = norm;
-  var light = 0.95 - 0.5*norm;
-  return hslToRgb(hue,sat,light);
+function animateDLA(){
+  spawnWalkers(5);
+  updateWalkers();
+  renderDLA();
+  requestAnimationFrame(animateDLA);
 }
-function hslToRgb(h,s,l){
-  h = ((h%360)+360)%360;
-  var c = (1-Math.abs(2*l-1))*s, hh = h/60, x = c*(1-Math.abs((hh%2)-1));
-  var r=0,g=0,b=0;
-  if(hh<1){ r=c; g=x; } else if(hh<2){ r=x; g=c; } else if(hh<3){ g=c; b=x; } else if(hh<4){ g=x; b=c; } else if(hh<5){ r=x; b=c; } else { r=c; b=x; }
-  var m = l-c/2;
-  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
-}
-function animateCH(){
-  updateCH();
-  renderCH();
-  requestAnimationFrame(animateCH);
-}
-animateCH();
+animateDLA();
 </script>
 </body>
 </html>
