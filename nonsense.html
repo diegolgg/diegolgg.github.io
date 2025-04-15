@@ -7,11 +7,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { background: #fff; }
-#acCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+#saffCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
 </style>
 </head>
 <body>
-<canvas id="acCanvas"></canvas>
+<canvas id="saffCanvas"></canvas>
 <div class="blog-container">
   <div class="blog-post" onclick="toggleContent('post1')">
     <h2>Today’s Musings</h2>
@@ -31,11 +31,11 @@ function toggleContent(id){
   var el = document.getElementById(id);
   el.style.display = (el.style.display==="none" || el.style.display==="") ? "block" : "none";
 }
-var canvas = document.getElementById("acCanvas"), ctx = canvas.getContext("2d");
+var canvas = document.getElementById("saffCanvas"), ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 var NX = 160, NY = 160;
 var φ = new Float32Array(NX*NY), φ0 = new Float32Array(NX*NY);
-var dt = 0.01, D = 0.1, epsilon = 1;
+var dt = 0.005, D = 0.01, M = 1;
 function idx(i,j){ return i+j*NX; }
 for(var j=0;j<NY;j++){
   for(var i=0;i<NX;i++){
@@ -44,25 +44,20 @@ for(var j=0;j<NY;j++){
   }
 }
 for(var j=0;j<NY;j++){
-  φ[idx(0,j)] = 1;
-  φ0[idx(0,j)] = 1;
+  for(var i=0;i<5;i++){
+    φ[idx(i,j)] = 1;
+    φ0[idx(i,j)] = 1;
+  }
 }
 function laplace(φ,i,j){
-  var sum = 0;
-  sum += φ[idx(i-1,j)];
-  sum += φ[idx(i+1,j)];
-  sum += φ[idx(i,j-1)];
-  sum += φ[idx(i,j+1)];
-  return sum - 4*φ[idx(i,j)];
+  return φ[idx(i-1,j)] + φ[idx(i+1,j)] + φ[idx(i,j-1)] + φ[idx(i,j+1)] - 4*φ[idx(i,j)];
 }
 function allenCahn(){
   for(var j=1;j<NY-1;j++){
     for(var i=1;i<NX-1;i++){
       var id = idx(i,j);
-      // Allen-Cahn dynamics: Δφ term and double-well potential derivative
       var dφ = D * laplace(φ,i,j) - (Math.pow(φ[id],3) - φ[id]);
-      // Injection term: near left edge (i < 5) inject slightly to force φ toward +1
-      if(i < 5) { dφ += 2*(Math.random()*0.2 - 0.1); }
+      if(i < 5) { dφ += M*(1 - φ[id]); }
       φ0[id] = φ[id] + dt * dφ;
     }
   }
@@ -71,7 +66,6 @@ function allenCahn(){
       φ[idx(i,j)] = φ0[idx(i,j)];
     }
   }
-  // Fixed Neumann boundaries
   for(var j=0;j<NY;j++){
     φ[idx(0,j)] = φ[idx(1,j)];
     φ[idx(NX-1,j)] = φ[idx(NX-2,j)];
@@ -90,24 +84,23 @@ function renderAC(){
       var norm = (val+1)/2;
       var rgb = acColor(norm);
       ctx.fillStyle = "rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+")";
-      ctx.fillRect(i*cellW, j*cellH, cellW, cellH);
+      ctx.fillRect(i*cellW,j*cellH,cellW,cellH);
     }
   }
 }
 function acColor(norm){
-  // Map from -1 (white) to +1 (blue); norm in [0,1]
   var hue = 220;
-  var sat = norm;
+  var sat = 0.8*norm;
   var light = 0.95 - 0.5*norm;
   return hslToRgb(hue,sat,light);
 }
 function hslToRgb(h,s,l){
   h = ((h%360)+360)%360;
   var c = (1-Math.abs(2*l-1))*s, hh = h/60, x = c*(1-Math.abs((hh%2)-1));
-  var r=0, g=0, b=0;
-  if(hh<1){ r = c; g = x; } else if(hh<2){ r = x; g = c; } else if(hh<3){ g = c; b = x; } else if(hh<4){ g = x; b = c; } else if(hh<5){ r = x; b = c; } else { r = c; b = x; }
+  var r=0,g=0,b=0;
+  if(hh<1){ r=c; g=x; } else if(hh<2){ r=x; g=c; } else if(hh<3){ g=c; b=x; } else if(hh<4){ g=x; b=c; } else if(hh<5){ r=x; b=c; } else { r=c; b=x; }
   var m = l-c/2;
-  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+  return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
 }
 function animateAC(){
   allenCahn();
