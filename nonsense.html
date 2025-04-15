@@ -35,8 +35,9 @@ var canvas = document.getElementById("saffCanvas"), ctx = canvas.getContext("2d"
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 var Nx = 80, Ny = 80, sx = Nx+2, sy = Ny+2;
 function IX(i,j){ return i+j*sx; }
-var dt = 0.1, diff = 0.0005, visc = 0.001;
-var u = new Float32Array(sx*sy), v = new Float32Array(sx*sy), u0 = new Float32Array(sx*sy), v0 = new Float32Array(sx*sy);
+var dt = 0.05, diff = 0.0003, visc = 0.0008;
+var u = new Float32Array(sx*sy), v = new Float32Array(sx*sy),
+    u0 = new Float32Array(sx*sy), v0 = new Float32Array(sx*sy);
 var dens = new Float32Array(sx*sy), dens0 = new Float32Array(sx*sy);
 for(var j=0;j<sy;j++){
   for(var i=0;i<sx;i++){
@@ -52,12 +53,12 @@ for(var j=1;j<=Ny;j++){
 function add_source(x,s,dt){ for(var i=0;i<x.length;i++){ x[i]+=dt*s[i]; } }
 function set_bnd(b,x){
  for(var i=1;i<=Nx;i++){
-  x[IX(i,0)] = b==2?-x[IX(i,1)]:x[IX(i,1)];
-  x[IX(i,Ny+1)] = b==2?-x[IX(i,Ny)]:x[IX(i,Ny)];
+  x[IX(i,0)] = b==2?-x[IX(i,1)] : x[IX(i,1)];
+  x[IX(i,Ny+1)] = b==2?-x[IX(i,Ny)] : x[IX(i,Ny)];
  }
  for(var j=1;j<=Ny;j++){
-  x[IX(0,j)] = b==1?-x[IX(1,j)]:x[IX(1,j)];
-  x[IX(Nx+1,j)] = b==1?-x[IX(Nx,j)]:x[IX(Nx,j)];
+  x[IX(0,j)] = b==1?-x[IX(1,j)] : x[IX(1,j)];
+  x[IX(Nx+1,j)] = b==1?-x[IX(Nx,j)] : x[IX(Nx,j)];
  }
  x[IX(0,0)] = 0.5*(x[IX(1,0)]+x[IX(0,1)]);
  x[IX(0,Ny+1)] = 0.5*(x[IX(1,Ny+1)]+x[IX(0,Ny)]);
@@ -86,7 +87,7 @@ function advect(b,d,d0,u,v,dt){
    if(y<0.5)y=0.5; if(y>Ny+0.5)y=Ny+0.5;
    var j0=Math.floor(y), j1=j0+1;
    var s1=x-i0, s0=1-s1, t1=y-j0, t0=1-t1;
-   d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+   d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)] + t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)] + t1*d0[IX(i1,j1)]);
   }
  }
  set_bnd(b,d);
@@ -94,7 +95,7 @@ function advect(b,d,d0,u,v,dt){
 function project(u,v,p,div){
  for(var j=1;j<=Ny;j++){
   for(var i=1;i<=Nx;i++){
-   div[IX(i,j)] = -0.5*(u[IX(i+1,j)]-u[IX(i-1,j)]+v[IX(i,j+1)]-v[IX(i,j-1)])/Nx;
+   div[IX(i,j)] = -0.5*(u[IX(i+1,j)]-u[IX(i-1,j)] + v[IX(i,j+1)]-v[IX(i,j-1)])/Nx;
    p[IX(i,j)] = 0;
   }
  }
@@ -133,9 +134,11 @@ function density_step(x,x0,u,v,diff,dt){
 }
 function inject(){
   for(var j=1;j<=Ny;j++){
-    var idx = IX(1,j);
-    u[idx] = 1.0 + (Math.random()-0.5)*0.2;
-    dens[idx] = 0.3 + (Math.random()-0.5)*0.05;
+    if(Math.random()<0.5){
+      var idx = IX(1,j);
+      u[idx] = 2.5 + (Math.random()-0.5)*1.0;
+      dens[idx] = 0.25 + (Math.random()-0.5)*0.1;
+    }
   }
 }
 function step(){
@@ -147,7 +150,7 @@ function step(){
 function hslToRgb(h,s,l){
  h = ((h%360)+360)%360;
  var c = (1-Math.abs(2*l-1))*s, hh = h/60, x = c*(1-Math.abs((hh%2)-1));
- var r = 0,g = 0,b = 0;
+ var r = 0, g = 0, b = 0;
  if(hh<1){ r = c; g = x; } else if(hh<2){ r = x; g = c; } else if(hh<3){ g = c; b = x; } else if(hh<4){ g = x; b = c; } else if(hh<5){ r = x; b = c; } else { r = c; b = x; }
  var m = l-c/2;
  return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
@@ -157,12 +160,12 @@ function render(){
   for(var j=1;j<=Ny;j++){
     for(var i=1;i<=Nx;i++){
       var dVal = dens[IX(i,j)];
-      var norm = (dVal-0.3)/(0.7-0.3);
-      if(norm<0) norm = 0; if(norm>1) norm = 1;
-      var hue = 240 * (1-norm);
+      var norm = (dVal-0.25)/(0.45);
+      norm = Math.max(0,Math.min(norm,1));
+      var hue = 240*(1-norm);
       var sat = 1-norm;
       var light = 0.4 + 0.6*norm;
-      var rgb = hslToRgb(hue, sat, light);
+      var rgb = hslToRgb(hue,sat,light);
       ctx.fillStyle = "rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+")";
       ctx.fillRect((i-1)*cellW, (j-1)*cellH, cellW, cellH);
     }
