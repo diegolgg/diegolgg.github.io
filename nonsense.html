@@ -2,25 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Other Nonsense (LessWrong Style)</title>
+  <title>Nonsense – LessWrong-ish</title>
   <link rel="stylesheet" href="style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 <div class="top-bar">
-  <button class="add-post-btn" onclick="togglePostForm()">Add Post</button>
+  <div class="top-bar-left">
+    <button class="lw-button" onclick="togglePostForm()">Add Post</button>
+  </div>
 </div>
 <div class="post-form-container" id="postForm" style="display:none;">
-  <h2>Create a New Post</h2>
-  <label for="postTitle">Title:</label>
-  <input type="text" id="postTitle" placeholder="Enter your post title...">
-  <label for="postAuthor">Author:</label>
-  <input type="text" id="postAuthor" placeholder="Enter your name...">
-  <label for="postSnippet">Snippet (short excerpt):</label>
-  <textarea id="postSnippet" rows="3" placeholder="A short excerpt to show in the feed..."></textarea>
-  <label for="postContent">Full Text:</label>
-  <textarea id="postContent" rows="5" placeholder="The full text that appears when expanded..."></textarea>
-  <button onclick="submitPost()">Submit</button>
+  <div class="post-form-header">
+    <h2>Create a New Post</h2>
+    <span class="form-close" onclick="togglePostForm()">×</span>
+  </div>
+  <div class="post-form-body">
+    <label>Title:</label>
+    <input type="text" id="postTitle" placeholder="Post Title">
+    <label>Author:</label>
+    <input type="text" id="postAuthor" placeholder="Your Name">
+    <label>Snippet:</label>
+    <textarea id="postSnippet" rows="2" placeholder="Short excerpt or summary"></textarea>
+    <label>Full Text:</label>
+    <textarea id="postContent" rows="4" placeholder="Full content that appears when expanded"></textarea>
+  </div>
+  <div class="post-form-footer">
+    <button class="lw-button" onclick="submitPost()">Submit</button>
+  </div>
 </div>
 <div class="feed-container" id="feedContainer"></div>
 <script>
@@ -29,46 +38,47 @@ const postsData = [
     title: "Evidence of Potential Misalignment in AI",
     author: "UserA",
     time: "5h",
-    snippet: "Short excerpt about potential misalignment evidence in advanced AI systems...",
-    content: "Full text about misalignment: Lorem ipsum dolor sit amet, ...\nAdditional thoughts or analysis here.\nEven more text to illustrate a fuller body.",
-    comments: []
+    snippet: "A short snippet about potential misalignment…",
+    content: "Full text about misalignment. Lorem ipsum dolor sit amet...\nMultiple lines of detail.",
+    comments: [{user:"RandomUser", text:"Very interesting post, thanks!"}]
   },
   {
     title: "Should AI Encourage Cooperation?",
     author: "UserB",
     time: "6h",
-    snippet: "Snippet: The question of whether AI should push for cooperation or remain neutral.",
-    content: "Full text about AI cooperation. Lorem ipsum dolor sit amet, ...\nWe explore various angles here.\nThis is the second line.",
+    snippet: "Snippet about whether AI should push for cooperation.",
+    content: "Full content about cooperation: Lorem ipsum dolor sit amet...\nAn additional line.",
     comments: []
   },
   {
-    title: "Interpreting LLM Failures",
+    title: "LLM Interpretability is Crucial",
     author: "UserC",
     time: "1d",
     snippet: "Snippet: Surprising LLM failures highlight interpretability needs.",
-    content: "Full text about LLM interpretability: Lorem ipsum.\nWe expand on the idea that LLM reasoning is hidden.\nHence the need for interpretability methods.",
+    content: "Extended text about LLM interpretability… Lorem ipsum.\nWe expand on the idea that LLM reasoning is hidden.\nHence the need for interpretability methods.",
     comments: []
   }
 ];
+
 function togglePostForm(){
-  const form = document.getElementById("postForm");
-  form.style.display = (form.style.display === "none" || form.style.display==="") ? "block" : "none";
+  const pf = document.getElementById("postForm");
+  pf.style.display = (pf.style.display==="none"||pf.style.display==="") ? "block":"none";
 }
 function submitPost(){
-  const title = document.getElementById("postTitle").value.trim();
-  const author = document.getElementById("postAuthor").value.trim();
-  const snippet = document.getElementById("postSnippet").value.trim();
-  const content = document.getElementById("postContent").value.trim();
-  if(!title || !author || !snippet || !content) return;
-  const newPost = {
-    title: title,
-    author: author,
-    time: "just now",
-    snippet: snippet,
-    content: content,
-    comments: []
+  const t = document.getElementById("postTitle").value.trim();
+  const a = document.getElementById("postAuthor").value.trim();
+  const s = document.getElementById("postSnippet").value.trim();
+  const c = document.getElementById("postContent").value.trim();
+  if(!t||!a||!s||!c) return;
+  const newP = {
+    title:t,
+    author:a,
+    time:"Just now",
+    snippet:s,
+    content:c,
+    comments:[]
   };
-  postsData.unshift(newPost);
+  postsData.unshift(newP);
   renderPosts();
   togglePostForm();
   document.getElementById("postTitle").value="";
@@ -76,95 +86,99 @@ function submitPost(){
   document.getElementById("postSnippet").value="";
   document.getElementById("postContent").value="";
 }
-function togglePostContent(idx){
-  const fullContentEl = document.getElementById(`fullContent-${idx}`);
-  if(fullContentEl.style.display==="none"||fullContentEl.style.display==="") {
-    fullContentEl.style.display="block";
-  } else {
-    fullContentEl.style.display="none";
-  }
+function toggleContent(idx){
+  const fc = document.getElementById(`fullContent-${idx}`);
+  fc.style.display=(fc.style.display==="none"||fc.style.display==="")?"block":"none";
 }
 function addComment(idx){
   const nameField = document.getElementById(`commentName-${idx}`);
-  const commentBox = document.getElementById(`commentText-${idx}`);
-  const nameVal = nameField.value.trim();
-  const commentVal = commentBox.value.trim();
-  if(!nameVal||!commentVal) return;
-  postsData[idx].comments.push({name:nameVal, text: commentVal});
+  const textField = document.getElementById(`commentText-${idx}`);
+  const userName = nameField.value.trim();
+  const userComment = textField.value.trim();
+  if(!userName||!userComment) return;
+  postsData[idx].comments.push({user:userName, text:userComment});
   nameField.value="";
-  commentBox.value="";
+  textField.value="";
   renderPosts();
-  togglePostContent(idx);
+  toggleContent(idx);
 }
 function renderPosts(){
-  const container = document.getElementById("feedContainer");
-  container.innerHTML="";
-  for(let i=0; i<postsData.length;i++){
-    const post=postsData[i];
+  const fc=document.getElementById("feedContainer");
+  fc.innerHTML="";
+  for(let i=0;i<postsData.length;i++){
+    const p=postsData[i];
     const card=document.createElement("div");
     card.className="lw-post-card";
-    const topRow=document.createElement("div");
-    topRow.className="lw-post-top";
-    const titleEl=document.createElement("h2");
-    titleEl.className="lw-post-title";
-    titleEl.innerText=post.title;
-    titleEl.onclick=()=>togglePostContent(i);
-    const snippetEl=document.createElement("div");
-    snippetEl.className="lw-post-snippet";
-    snippetEl.innerText=post.snippet;
-    const authorTimeEl=document.createElement("div");
-    authorTimeEl.className="lw-post-author-time";
-    authorTimeEl.innerText=`${post.author} • ${post.time}`;
-    topRow.appendChild(titleEl);
-    topRow.appendChild(snippetEl);
-    topRow.appendChild(authorTimeEl);
-    card.appendChild(topRow);
 
-    const fullContentDiv=document.createElement("div");
-    fullContentDiv.className="lw-post-full-content";
-    fullContentDiv.id=`fullContent-${i}`;
-    fullContentDiv.style.display="none";
+    const topDiv=document.createElement("div");
+    topDiv.className="post-card-header";
+    const titleEl=document.createElement("h2");
+    titleEl.innerText=p.title;
+    titleEl.className="post-card-title";
+    titleEl.onclick=()=>toggleContent(i);
+
+    const snippetEl=document.createElement("div");
+    snippetEl.innerText=p.snippet;
+    snippetEl.className="post-card-snippet";
+
+    const metaDiv=document.createElement("div");
+    metaDiv.className="post-card-meta";
+    const cCount = p.comments.length>0?` • ${p.comments.length} comment(s)`:``;
+    metaDiv.innerText=`${p.author} • ${p.time}${cCount}`;
+
+    topDiv.appendChild(titleEl);
+    topDiv.appendChild(snippetEl);
+    topDiv.appendChild(metaDiv);
+    card.appendChild(topDiv);
+
+    const expandDiv=document.createElement("div");
+    expandDiv.className="post-card-expand";
+    expandDiv.id=`fullContent-${i}`;
+    expandDiv.style.display="none";
 
     const contentP=document.createElement("p");
-    contentP.innerText=post.content;
-    fullContentDiv.appendChild(contentP);
+    contentP.innerText=p.content;
+    expandDiv.appendChild(contentP);
 
-    if(post.comments && post.comments.length>0){
-      const commentsWrapper=document.createElement("div");
-      commentsWrapper.className="lw-comment-section";
-      for(const c of post.comments){
-        const cDiv=document.createElement("div");
-        cDiv.className="lw-comment-row";
-        cDiv.innerHTML=`<span class="lw-comment-name">${c.name}</span>: ${c.text}`;
-        commentsWrapper.appendChild(cDiv);
+    if(p.comments&&p.comments.length>0){
+      const cWrap=document.createElement("div");
+      cWrap.className="post-comments";
+      for(const c of p.comments){
+        const cLine=document.createElement("div");
+        cLine.className="comment-line";
+        cLine.innerHTML=`<strong>${c.user}</strong>: ${c.text}`;
+        cWrap.appendChild(cLine);
       }
-      fullContentDiv.appendChild(commentsWrapper);
+      expandDiv.appendChild(cWrap);
     }
-    const commentAdd=document.createElement("div");
-    commentAdd.className="lw-comment-add";
-    const labelName=document.createElement("label");
-    labelName.innerText="Name:";
-    const nameInput=document.createElement("input");
-    nameInput.type="text";
-    nameInput.id=`commentName-${i}`;
-    const labelComment=document.createElement("label");
-    labelComment.innerText="Comment:";
-    const commentField=document.createElement("textarea");
-    commentField.rows=2;
-    commentField.id=`commentText-${i}`;
-    const submitBtn=document.createElement("button");
-    submitBtn.innerText="Submit";
-    submitBtn.onclick=()=>addComment(i);
+    const addCmtDiv=document.createElement("div");
+    addCmtDiv.className="comment-add-wrap";
+    const nameLb=document.createElement("label");
+    nameLb.innerText="Name:";
+    const nameIn=document.createElement("input");
+    nameIn.type="text";
+    nameIn.id=`commentName-${i}`;
 
-    commentAdd.appendChild(labelName);
-    commentAdd.appendChild(nameInput);
-    commentAdd.appendChild(labelComment);
-    commentAdd.appendChild(commentField);
-    commentAdd.appendChild(submitBtn);
+    const cmtLb=document.createElement("label");
+    cmtLb.innerText="Comment:";
+    const cmtTa=document.createElement("textarea");
+    cmtTa.id=`commentText-${i}`;
+    cmtTa.rows=2;
 
-    fullContentDiv.appendChild(commentAdd);
-    card.appendChild(fullContentDiv);
-    container.appendChild(card);
+    const cmtBtn=document.createElement("button");
+    cmtBtn.className="lw-button-sm";
+    cmtBtn.innerText="Add Comment";
+    cmtBtn.onclick=()=>addComment(i);
+
+    addCmtDiv.appendChild(nameLb);
+    addCmtDiv.appendChild(nameIn);
+    addCmtDiv.appendChild(cmtLb);
+    addCmtDiv.appendChild(cmtTa);
+    addCmtDiv.appendChild(cmtBtn);
+
+    expandDiv.appendChild(addCmtDiv);
+    card.appendChild(expandDiv);
+    fc.appendChild(card);
   }
 }
 renderPosts();
