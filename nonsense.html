@@ -2,34 +2,174 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Other Nonsense</title>
+  <title>Nonsense - LessWrong-ish Feed</title>
   <link rel="stylesheet" href="style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { background: #fff; }
-  </style>
 </head>
 <body>
-<div class="blog-container">
-  <div class="blog-post" onclick="toggleContent('post1')">
-    <h2>Today’s Musings</h2>
-    <div id="post1" class="content">
-      <p>This blog post describes what I'm doing right now and my thoughts on ongoing research and projects...</p>
-    </div>
-  </div>
-  <div class="blog-post" onclick="toggleContent('post2')">
-    <h2>Another Update</h2>
-    <div id="post2" class="content">
-      <p>More ideas and notes on my current work. More details to come as the conversation unfolds...</p>
-    </div>
-  </div>
-  <!-- Add more posts as needed -->
+<div class="top-bar">
+  <h1 class="site-title">Nonsense</h1>
+  <button class="add-post-btn" onclick="togglePostForm()">Add Post</button>
+</div>
+<div class="post-form-container" id="postForm" style="display:none;">
+  <h2>Create a New Post</h2>
+  <label for="postTitle">Title:</label>
+  <input type="text" id="postTitle" placeholder="Enter your post title...">
+  <label for="postAuthor">Author:</label>
+  <input type="text" id="postAuthor" placeholder="Enter your name...">
+  <label for="postSnippet">Snippet (short excerpt):</label>
+  <textarea id="postSnippet" rows="3" placeholder="A short excerpt to show in the feed..."></textarea>
+  <label for="postContent">Full Text:</label>
+  <textarea id="postContent" rows="5" placeholder="The full text that appears when expanded..."></textarea>
+  <button onclick="submitPost()">Submit</button>
+</div>
+<div class="feed-container" id="feedContainer">
 </div>
 <script>
-function toggleContent(id){
-  var el = document.getElementById(id);
-  el.style.display = (el.style.display === "none" || el.style.display === "") ? "block" : "none";
+const postsData = [
+  {
+    title: "To be legible, evidence of misalignment probably has to be behavioral…",
+    author: "ryan_greenblatt",
+    time: "5h",
+    snippet: "A short excerpt about misalignment evidence needing to be behavioral.",
+    content: "Full text about misalignment. Lorem ipsum dolor sit amet...",
+    comments: []
+  },
+  {
+    title: "Should AI be Encouraged to Cooperate?",
+    author: "PeterMcCluskey",
+    time: "6h",
+    snippet: "A snippet about AI cooperation. Is this beneficial?",
+    content: "Full discussion about whether AI should cooperate. Lorem ipsum dolor sit amet...",
+    comments: []
+  },
+  {
+    title: "Surprising LLM reasoning failures require interpretability",
+    author: "Kaj_Sotala",
+    time: "9h",
+    snippet: "Snippet: we need interpretability because LLMs fail in surprising ways.",
+    content: "Long content about interpretability. Lorem ipsum dolor sit amet...",
+    comments: []
+  }
+];
+
+function togglePostForm(){
+  const form = document.getElementById("postForm");
+  form.style.display = (form.style.display === "none" || form.style.display === "") ? "block" : "none";
 }
+
+function submitPost(){
+  const title = document.getElementById("postTitle").value.trim();
+  const author = document.getElementById("postAuthor").value.trim();
+  const snippet = document.getElementById("postSnippet").value.trim();
+  const content = document.getElementById("postContent").value.trim();
+  if(!title || !author || !snippet || !content) return;
+  const newPost = {
+    title: title,
+    author: author,
+    time: "just now",
+    snippet: snippet,
+    content: content,
+    comments: []
+  };
+  postsData.unshift(newPost);
+  renderPosts();
+  togglePostForm();
+  document.getElementById("postTitle").value = "";
+  document.getElementById("postAuthor").value = "";
+  document.getElementById("postSnippet").value = "";
+  document.getElementById("postContent").value = "";
+}
+
+function togglePostContent(idx){
+  const fullContentEl = document.getElementById(`fullContent-${idx}`);
+  fullContentEl.style.display = (fullContentEl.style.display === "none" || fullContentEl.style.display === "") ? "block" : "none";
+}
+
+function addComment(idx){
+  const commentBox = document.getElementById(`commentInput-${idx}`);
+  const commentVal = commentBox.value.trim();
+  if(!commentVal) return;
+  postsData[idx].comments.push(commentVal);
+  commentBox.value = "";
+  renderPosts();
+  togglePostContent(idx);
+}
+
+function renderPosts(){
+  const container = document.getElementById("feedContainer");
+  container.innerHTML = "";
+  for(let i=0; i<postsData.length; i++){
+    const post = postsData[i];
+    const postDiv = document.createElement("div");
+    postDiv.className = "lw-post-row";
+
+    const leftDiv = document.createElement("div");
+    leftDiv.className = "lw-left";
+
+    const titleEl = document.createElement("h2");
+    titleEl.className = "lw-title";
+    titleEl.innerText = post.title;
+    titleEl.onclick = ()=> togglePostContent(i);
+
+    const snippetEl = document.createElement("div");
+    snippetEl.className = "lw-snippet";
+    snippetEl.innerText = post.snippet;
+
+    leftDiv.appendChild(titleEl);
+    leftDiv.appendChild(snippetEl);
+
+    const rightDiv = document.createElement("div");
+    rightDiv.className = "lw-right";
+
+    const authorTime = document.createElement("div");
+    authorTime.innerText = `${post.author} • ${post.time}`;
+    authorTime.className = "lw-author-time";
+
+    rightDiv.appendChild(authorTime);
+
+    postDiv.appendChild(leftDiv);
+    postDiv.appendChild(rightDiv);
+
+    const fullContentDiv = document.createElement("div");
+    fullContentDiv.className = "lw-full-content";
+    fullContentDiv.id = `fullContent-${i}`;
+    fullContentDiv.style.display = "none";
+
+    const contentP = document.createElement("p");
+    contentP.innerText = post.content;
+    fullContentDiv.appendChild(contentP);
+
+    if(post.comments && post.comments.length>0){
+      const commentsSection = document.createElement("div");
+      commentsSection.className = "lw-comments";
+      for(const c of post.comments){
+        const cDiv = document.createElement("div");
+        cDiv.className = "lw-comment";
+        cDiv.innerText = c;
+        commentsSection.appendChild(cDiv);
+      }
+      fullContentDiv.appendChild(commentsSection);
+    }
+    const commentWrap = document.createElement("div");
+    commentWrap.className = "lw-comment-wrap";
+    const commentInput = document.createElement("textarea");
+    commentInput.id = `commentInput-${i}`;
+    commentInput.rows = 2;
+    commentInput.placeholder = "Write a comment...";
+    const commentBtn = document.createElement("button");
+    commentBtn.innerText = "Submit Comment";
+    commentBtn.onclick = ()=> addComment(i);
+
+    commentWrap.appendChild(commentInput);
+    commentWrap.appendChild(commentBtn);
+    fullContentDiv.appendChild(commentWrap);
+
+    container.appendChild(postDiv);
+    container.appendChild(fullContentDiv);
+  }
+}
+renderPosts();
 </script>
 </body>
 </html>
