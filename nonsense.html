@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Nonsense – Feed</title>
+  <title>Nonsense</title>
   <link rel="stylesheet" href="style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -12,6 +12,7 @@
     <a href="index.html" class="home-link">Home</a>
   </div>
 </div>
+<h1 class="page-title">Nonsense</h1>
 <div class="feed-container" id="feedContainer"></div>
 <footer class="footer">
   <p>&copy; Diego Luca Gonzalez Gauss 2025</p>
@@ -24,8 +25,7 @@ const postsData = [
     author: "UserA",
     time: "5h",
     snippet: "A short excerpt about potential misalignment…",
-    content: "Full post content about potential misalignment. Lorem ipsum dolor sit amet...\nAdditional details here.",
-    comments: []
+    content: "Full post content about potential misalignment. Lorem ipsum dolor sit amet...\nAdditional details here."
   },
   {
     id: 2,
@@ -33,8 +33,7 @@ const postsData = [
     author: "UserB",
     time: "6h",
     snippet: "A snippet about whether AI should promote cooperation.",
-    content: "Full post content discussing cooperation in AI. Lorem ipsum dolor sit amet...\nFurther discussion follows.",
-    comments: []
+    content: "Full post content discussing cooperation in AI. Lorem ipsum dolor sit amet...\nFurther discussion follows."
   },
   {
     id: 3,
@@ -42,8 +41,7 @@ const postsData = [
     author: "UserC",
     time: "1d",
     snippet: "Snippet: surprising LLM failures highlight interpretability needs.",
-    content: "Extended discussion on why interpretability is important for LLMs. Lorem ipsum dolor sit amet...\nContinued analysis here.",
-    comments: []
+    content: "An extended discussion on why interpretability is important for LLMs. Lorem ipsum dolor sit amet...\nContinued analysis here."
   }
 ];
 function togglePostContent(id){
@@ -53,7 +51,7 @@ function togglePostContent(id){
 function renderPosts(){
   const container = document.getElementById("feedContainer");
   container.innerHTML = "";
-  postsData.forEach((post) => {
+  postsData.forEach((post)=>{
     const card = document.createElement("div");
     card.className = "lw-post-card";
     
