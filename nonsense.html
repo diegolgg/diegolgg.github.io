@@ -2,35 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Nonsense – LessWrong-ish</title>
+  <title>Nonsense – Feed</title>
   <link rel="stylesheet" href="style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<div class="top-bar">
-  <div class="top-bar-left">
-    <button class="lw-button" onclick="togglePostForm()">Add Post</button>
-  </div>
-</div>
-<div class="post-form-container" id="postForm" style="display:none;">
-  <div class="post-form-header">
-    <h2>Create a New Post</h2>
-    <span class="form-close" onclick="togglePostForm()">×</span>
-  </div>
-  <div class="post-form-body">
-    <label>Title:</label>
-    <input type="text" id="postTitle" placeholder="Post Title">
-    <label>Author:</label>
-    <input type="text" id="postAuthor" placeholder="Your Name">
-    <label>Snippet:</label>
-    <textarea id="postSnippet" rows="2" placeholder="Short excerpt or summary"></textarea>
-    <label>Full Text:</label>
-    <textarea id="postContent" rows="4" placeholder="Full content that appears when expanded"></textarea>
-  </div>
-  <div class="post-form-footer">
-    <button class="lw-button" onclick="submitPost()">Submit</button>
-  </div>
-</div>
 <div class="feed-container" id="feedContainer"></div>
 <script>
 const postsData = [
@@ -38,148 +14,54 @@ const postsData = [
     title: "Evidence of Potential Misalignment in AI",
     author: "UserA",
     time: "5h",
-    snippet: "A short snippet about potential misalignment…",
-    content: "Full text about misalignment. Lorem ipsum dolor sit amet...\nMultiple lines of detail.",
-    comments: [{user:"RandomUser", text:"Very interesting post, thanks!"}]
+    snippet: "A short excerpt about potential misalignment…",
+    content: "Full text about potential misalignment. Lorem ipsum dolor sit amet..."
   },
   {
     title: "Should AI Encourage Cooperation?",
     author: "UserB",
     time: "6h",
-    snippet: "Snippet about whether AI should push for cooperation.",
-    content: "Full content about cooperation: Lorem ipsum dolor sit amet...\nAn additional line.",
-    comments: []
+    snippet: "A snippet about whether AI should promote cooperation.",
+    content: "Full text discussing cooperation in AI. Lorem ipsum dolor sit amet..."
   },
   {
     title: "LLM Interpretability is Crucial",
     author: "UserC",
     time: "1d",
-    snippet: "Snippet: Surprising LLM failures highlight interpretability needs.",
-    content: "Extended text about LLM interpretability… Lorem ipsum.\nWe expand on the idea that LLM reasoning is hidden.\nHence the need for interpretability methods.",
-    comments: []
+    snippet: "Snippet: surprising LLM failures highlight interpretability needs.",
+    content: "Extended discussion on why interpretability is important for LLMs. Lorem ipsum dolor sit amet..."
   }
 ];
-
-function togglePostForm(){
-  const pf = document.getElementById("postForm");
-  pf.style.display = (pf.style.display==="none"||pf.style.display==="") ? "block":"none";
-}
-function submitPost(){
-  const t = document.getElementById("postTitle").value.trim();
-  const a = document.getElementById("postAuthor").value.trim();
-  const s = document.getElementById("postSnippet").value.trim();
-  const c = document.getElementById("postContent").value.trim();
-  if(!t||!a||!s||!c) return;
-  const newP = {
-    title:t,
-    author:a,
-    time:"Just now",
-    snippet:s,
-    content:c,
-    comments:[]
-  };
-  postsData.unshift(newP);
-  renderPosts();
-  togglePostForm();
-  document.getElementById("postTitle").value="";
-  document.getElementById("postAuthor").value="";
-  document.getElementById("postSnippet").value="";
-  document.getElementById("postContent").value="";
-}
-function toggleContent(idx){
-  const fc = document.getElementById(`fullContent-${idx}`);
-  fc.style.display=(fc.style.display==="none"||fc.style.display==="")?"block":"none";
-}
-function addComment(idx){
-  const nameField = document.getElementById(`commentName-${idx}`);
-  const textField = document.getElementById(`commentText-${idx}`);
-  const userName = nameField.value.trim();
-  const userComment = textField.value.trim();
-  if(!userName||!userComment) return;
-  postsData[idx].comments.push({user:userName, text:userComment});
-  nameField.value="";
-  textField.value="";
-  renderPosts();
-  toggleContent(idx);
-}
 function renderPosts(){
-  const fc=document.getElementById("feedContainer");
-  fc.innerHTML="";
-  for(let i=0;i<postsData.length;i++){
-    const p=postsData[i];
-    const card=document.createElement("div");
-    card.className="lw-post-card";
-
-    const topDiv=document.createElement("div");
-    topDiv.className="post-card-header";
-    const titleEl=document.createElement("h2");
-    titleEl.innerText=p.title;
-    titleEl.className="post-card-title";
-    titleEl.onclick=()=>toggleContent(i);
-
-    const snippetEl=document.createElement("div");
-    snippetEl.innerText=p.snippet;
-    snippetEl.className="post-card-snippet";
-
-    const metaDiv=document.createElement("div");
-    metaDiv.className="post-card-meta";
-    const cCount = p.comments.length>0?` • ${p.comments.length} comment(s)`:``;
-    metaDiv.innerText=`${p.author} • ${p.time}${cCount}`;
-
-    topDiv.appendChild(titleEl);
-    topDiv.appendChild(snippetEl);
-    topDiv.appendChild(metaDiv);
-    card.appendChild(topDiv);
-
-    const expandDiv=document.createElement("div");
-    expandDiv.className="post-card-expand";
-    expandDiv.id=`fullContent-${i}`;
-    expandDiv.style.display="none";
-
-    const contentP=document.createElement("p");
-    contentP.innerText=p.content;
-    expandDiv.appendChild(contentP);
-
-    if(p.comments&&p.comments.length>0){
-      const cWrap=document.createElement("div");
-      cWrap.className="post-comments";
-      for(const c of p.comments){
-        const cLine=document.createElement("div");
-        cLine.className="comment-line";
-        cLine.innerHTML=`<strong>${c.user}</strong>: ${c.text}`;
-        cWrap.appendChild(cLine);
-      }
-      expandDiv.appendChild(cWrap);
-    }
-    const addCmtDiv=document.createElement("div");
-    addCmtDiv.className="comment-add-wrap";
-    const nameLb=document.createElement("label");
-    nameLb.innerText="Name:";
-    const nameIn=document.createElement("input");
-    nameIn.type="text";
-    nameIn.id=`commentName-${i}`;
-
-    const cmtLb=document.createElement("label");
-    cmtLb.innerText="Comment:";
-    const cmtTa=document.createElement("textarea");
-    cmtTa.id=`commentText-${i}`;
-    cmtTa.rows=2;
-
-    const cmtBtn=document.createElement("button");
-    cmtBtn.className="lw-button-sm";
-    cmtBtn.innerText="Add Comment";
-    cmtBtn.onclick=()=>addComment(i);
-
-    addCmtDiv.appendChild(nameLb);
-    addCmtDiv.appendChild(nameIn);
-    addCmtDiv.appendChild(cmtLb);
-    addCmtDiv.appendChild(cmtTa);
-    addCmtDiv.appendChild(cmtBtn);
-
-    expandDiv.appendChild(addCmtDiv);
-    card.appendChild(expandDiv);
-    fc.appendChild(card);
-  }
+  const container = document.getElementById("feedContainer");
+  container.innerHTML = "";
+  postsData.forEach(post => {
+    const card = document.createElement("div");
+    card.className = "lw-post-card";
+    
+    const header = document.createElement("div");
+    header.className = "post-card-header";
+    
+    const titleEl = document.createElement("h2");
+    titleEl.className = "post-card-title";
+    titleEl.innerText = post.title;
+    
+    const metaEl = document.createElement("div");
+    metaEl.className = "post-card-meta";
+    metaEl.innerText = `${post.author} • ${post.time}`;
+    
+    header.appendChild(titleEl);
+    header.appendChild(metaEl);
+    card.appendChild(header);
+    
+    const snippetEl = document.createElement("div");
+    snippetEl.className = "post-card-snippet";
+    snippetEl.innerText = post.snippet;
+    
+    card.appendChild(snippetEl);
+    
+    container.appendChild(card);
+  });
 }
 renderPosts();
 </script>
