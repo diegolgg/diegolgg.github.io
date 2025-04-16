@@ -7,35 +7,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+<div class="top-bar">
+  <div class="top-bar-left">
+    <a href="index.html" class="home-link">Home</a>
+  </div>
+</div>
 <div class="feed-container" id="feedContainer"></div>
+<footer class="footer">
+  <p>&copy; Diego Luca Gonzalez Gauss 2025</p>
+</footer>
 <script>
 const postsData = [
   {
+    id: 1,
     title: "Evidence of Potential Misalignment in AI",
     author: "UserA",
     time: "5h",
     snippet: "A short excerpt about potential misalignment…",
-    content: "Full text about potential misalignment. Lorem ipsum dolor sit amet..."
+    content: "Full post content about potential misalignment. Lorem ipsum dolor sit amet...\nAdditional details here.",
+    comments: []
   },
   {
+    id: 2,
     title: "Should AI Encourage Cooperation?",
     author: "UserB",
     time: "6h",
     snippet: "A snippet about whether AI should promote cooperation.",
-    content: "Full text discussing cooperation in AI. Lorem ipsum dolor sit amet..."
+    content: "Full post content discussing cooperation in AI. Lorem ipsum dolor sit amet...\nFurther discussion follows.",
+    comments: []
   },
   {
+    id: 3,
     title: "LLM Interpretability is Crucial",
     author: "UserC",
     time: "1d",
     snippet: "Snippet: surprising LLM failures highlight interpretability needs.",
-    content: "Extended discussion on why interpretability is important for LLMs. Lorem ipsum dolor sit amet..."
+    content: "Extended discussion on why interpretability is important for LLMs. Lorem ipsum dolor sit amet...\nContinued analysis here.",
+    comments: []
   }
 ];
+function togglePostContent(id){
+  const fullContentEl = document.getElementById(`fullContent-${id}`);
+  fullContentEl.style.display = (fullContentEl.style.display==="none" || fullContentEl.style.display==="") ? "block" : "none";
+}
 function renderPosts(){
   const container = document.getElementById("feedContainer");
   container.innerHTML = "";
-  postsData.forEach(post => {
+  postsData.forEach((post) => {
     const card = document.createElement("div");
     card.className = "lw-post-card";
     
@@ -45,6 +63,7 @@ function renderPosts(){
     const titleEl = document.createElement("h2");
     titleEl.className = "post-card-title";
     titleEl.innerText = post.title;
+    titleEl.onclick = () => togglePostContent(post.id);
     
     const metaEl = document.createElement("div");
     metaEl.className = "post-card-meta";
@@ -57,9 +76,17 @@ function renderPosts(){
     const snippetEl = document.createElement("div");
     snippetEl.className = "post-card-snippet";
     snippetEl.innerText = post.snippet;
-    
     card.appendChild(snippetEl);
     
+    const fullDiv = document.createElement("div");
+    fullDiv.className = "lw-post-full-content";
+    fullDiv.id = `fullContent-${post.id}`;
+    fullDiv.style.display = "none";
+    const contentP = document.createElement("p");
+    contentP.innerText = post.content;
+    fullDiv.appendChild(contentP);
+    
+    card.appendChild(fullDiv);
     container.appendChild(card);
   });
 }
