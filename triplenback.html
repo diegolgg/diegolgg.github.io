@@ -134,6 +134,15 @@
       // evaluate previous
       if(sequence.length){
         const idx = sequence.length-1-n;
+        
+        if (responses.size === 0) {
+      total++;
+      chart.data.labels.push(total);
+      chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
+      acc.textContent    = ((correct/total)*100).toFixed(1) + '%';
+      peakEl.textContent = peak.toFixed(1) + '%';
+    }
+    
         responses.forEach(s=>{
           let hit = idx>=0 && sequence[sequence.length-1][s] === sequence[idx][s];
           if(hit) correct++;
@@ -181,12 +190,24 @@
       historyEl.append(li);
     }
 
-    historyEl.addEventListener('click', e=>{
-      if(e.target.tagName==='LI'){
-        const r = runs[+e.target.dataset.idx];
-        alert(`Run ${+e.target.dataset.idx+1}\npeak: ${r.peak.toFixed(1)}%`);
-      }
-    });
+    historyEl.addEventListener('click', e => {
+  if (e.target.tagName !== 'LI') return;
+  const idx = +e.target.dataset.idx;
+  const run = runs[idx];
+  if (!run) return;
+  // 1) Reload chart data:
+  chart.data.labels           = [...run.labels];
+  chart.data.datasets[0].data = [...run.data];
+  chart.update();
+  // 2) Restore stats:
+  total    = run.labels.length;
+  correct  = Math.round(run.data[run.data.length - 1] / 100 * total);
+  peak     = run.peak;
+  acc.textContent   = ((correct/total)*100).toFixed(1) + '%';
+  peakEl.textContent = peak.toFixed(1) + '%';
+  // 3) (Optionally) reset response buffer so nextStep still works:
+  responses.clear();
+});
   </script>
 </body>
 </html>
