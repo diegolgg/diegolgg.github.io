@@ -109,11 +109,20 @@
       }
     }
 
-    document.addEventListener('keydown', e=>{
-      const keyMap={'1':'pos','2':'color','3':'tone'};
-      if(keyMap[e.key]){
-        responses.add(keyMap[e.key]);
+    document.addEventListener('keydown', e => {
+      // Pause (Space) stops and resets
+      if (e.code === 'Space') {
+        e.preventDefault();
+        clearTimeout(stepTimer);
+        clearInterval(tickTimer);
+        responses.clear();
+        resetChart();
+        return;
       }
+      const mapKey = {'1':'pos','2':'color','3':'tone'}[e.key];
+      if(!mapKey || !sequence.length) return;
+      e.preventDefault();
+      responses.add(mapKey);
     });
 
     function nextStep(){
