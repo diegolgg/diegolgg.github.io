@@ -26,7 +26,7 @@
   position: absolute;
   top: 50px;
   right: 20px;
-  background-color: #fff !important;
+  background-color: #fff;
   border: 1px solid #ccc;
   padding: 1rem;
   width: 300px;
@@ -116,15 +116,35 @@
     const data       = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }]};
     const chart      = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{ display:true, text:'Trial'} }, y:{ min:0, max:1 } } } });
 
-    document.getElementById('start-btn').addEventListener('click', ()=>{
-      clearTimeout(timer); clearInterval(timeInterval);
-      if(chart.data.labels.length) saveRun();
-      n      = +document.getElementById('input-n').value;
-      m      = +document.getElementById('input-m').value;
-      modVal = +document.getElementById('input-mod').value;
-      sec    = +document.getElementById('input-sec').value *1000;
-      P=bestP=0; updateCurrentInfo(); resetChart(); newRound();
-    });
+    document.getElementById('start-btn').addEventListener('click', () => {
+  clearTimeout(timer);
+  clearInterval(timeInterval);
+
+  const nVal    = parseInt(document.getElementById('input-n').value,   10);
+  const mVal    = parseInt(document.getElementById('input-m').value,   10);
+  const modIn   = parseInt(document.getElementById('input-mod').value, 10);
+  const secIn   = parseInt(document.getElementById('input-sec').value, 10);
+
+  if (
+    isNaN(nVal) || nVal <= 0 ||
+    isNaN(mVal) || mVal <= 0 ||
+    isNaN(modIn) || modIn <= 0 ||
+    isNaN(secIn) || secIn <= 0
+  ) {
+    alert('Please enter positive numbers for n, m, mod and sec.');
+    return;
+  }
+
+  n      = nVal;
+  m      = mVal;
+  modVal = modIn;
+  sec    = secIn * 1000;
+  P = bestP = 0;
+
+  updateCurrentInfo();
+  resetChart();
+  newRound();
+});
 
     document.getElementById('howto-btn').addEventListener('click', ()=>{
       const d=document.getElementById('howto');
