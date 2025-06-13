@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Modulus</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; }
+    html, body { margin: 0; padding: 0; /* overflow hidden removed to show footer */ }
     body { font-family: sans-serif; }
     #toolbar { padding:1rem; background:#fafafa; position: relative; z-index:3; }
     #howto-btn { position: absolute; top:1rem; right:1rem; }
@@ -92,7 +92,7 @@
           curN = document.getElementById('cur-n'), curM = document.getElementById('cur-m'),
           curMod = document.getElementById('cur-mod'), curSec = document.getElementById('cur-sec'),
           historyEl = document.getElementById('run-history'), flashEl = document.getElementById('flash'),
-          ctx = document.getElementById('chart').getContext('2d'),
+          ctx = https://cdn.jsdelivr.net/npm/chart.js.getContext('2d'),
           data = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }]},
           chart = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{display:true,text:'Trial'} }, y:{ min:0,max:1 } } } });
 
@@ -203,6 +203,7 @@
       const size = Math.min(Math.floor(availW / n), Math.floor(availH / m));
       gridEl.style.gridTemplateColumns = `repeat(${n}, ${size}px)`;
       gridEl.style.gridTemplateRows    = `repeat(${m}, ${size}px)`;
+      gridEl.innerHTML = '';
       let count = 0;
       for(let i = 0; i < n*m; i++){
         const d = document.createElement('div');
