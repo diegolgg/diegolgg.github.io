@@ -85,7 +85,7 @@
       sec = +document.getElementById('input-sec').value*1000;
       sequence=[]; total=0; correct=0; peak=0;
       chart.data.labels=[]; chart.data.datasets[0].data=[]; chart.update();
-      historyEl.innerHTML='';
+      // preserve history on reset
       curN.textContent = n;
       acc.textContent = '0%'; peakEl.textContent='0%'; elapsedEl.textContent='0.0';
       renderGrid();
@@ -115,9 +115,12 @@
         e.preventDefault();
         clearTimeout(stepTimer);
         clearInterval(tickTimer);
+        // save current run history before reset
+        if (total > 0) saveRun();
         responses.clear();
         resetChart();
         return;
+      }
       }
       const mapKey = {'1':'pos','2':'color','3':'tone'}[e.key];
       if(!mapKey || !sequence.length) return;
