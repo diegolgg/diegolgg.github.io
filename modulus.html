@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modulus</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    .wrapper { display: flex; height: 100vh; }
+    .game, .diagnostics { padding: 1rem; }
+    .game { flex: 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+    .grid { display: grid; gap: 2px; margin-top: 1rem; }
+    .tile { width: 30px; height: 30px; background: white; border: 1px solid #ccc; }
+    .black { background: black; }
+    .controls { display: flex; gap: 1rem; }
+    .diagnostics { flex: 1; border-left: 1px solid #ddd; }
+    canvas { max-width: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="controls">
+    n: <input id="input-n" type="number" value="5" min="1" style="width:4ch">
+    m: <input id="input-m" type="number" value="5" min="2" style="width:4ch">
+    k (s): <input id="input-k" type="number" value="5" min="1" style="width:4ch">
+    <button id="start-btn">Start</button>
+    <span>Press space to pause</span>
+  </div>
+  <div class="wrapper">
+    <div class="game">
+      <div id="info">P: <span id="P-display">0.5</span></div>
+      <div id="grid" class="grid"></div>
+    </div>
+    <div class="diagnostics">
+      <div>Best P: <span id="bestP">0.5</span></div>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+  <script>
+    let n, m, k, P, bestP, timer, paused=false;
+    const gridEl = document.getElementById('grid');
+    const Pdisp = document.getElementById('P-display');
+    const bestPdisp = document.getElementById('bestP');
+    const ctx = document.getElementById('chart').getContext('2d');
+    const data = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }] };
+    const chart = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{display:true,text:'Trial'} }, y:{ min:0, max:1 } } } });
+    document.getElementById('start-btn').onclick = () => {
+      n = +document.getElementById('input-n').value;
+      m = +document.getElementById('input-m').value;
+      k = +document.getElementById('input-k').value*1000;
+      P = 0.5; bestP = P; updateDisplay(); newRound();
+    };
+    document.addEventListener('keydown', e => {
+      if (e.code==='Space') { paused=!paused; if(paused) clearTimeout(timer); else newRound(); }
+      if (!paused && e.key.match(/^\d$/)) {
+        const guess = +e.key;
+        const actual = window.currentCount % m;
+        clearTimeout(timer);
+        if (guess===actual) P = Math.min(1, P+0.01);
+        else P = Math.max(0, P-0.05);
+        if (P>bestP) { bestP=P; bestPdisp.textContent = bestP.toFixed(2); }
+        chart.data.labels.push(chart.data.labels.length+1);
+        chart.data.datasets[0].data.push(P);
+        chart.update();
+        updateDisplay();
+        newRound();
+      }
+    });
+    function updateDisplay() {
+      Pdisp.textContent = P.toFixed(2);
+    }
+    function newRound(){
+      if(paused) return;
+      gridEl.style.gridTemplateColumns = `repeat(${n},30px)`;
+      gridEl.innerHTML = '';
+      let count=0;
+      for(let i=0;i<n*n;i++){
+        const div = document.createElement('div');
+        div.className='tile';
+        if(Math.random()<P){ div.classList.add('black'); count++; }
+        gridEl.append(div);
+      }
+      window.currentCount = count;
+      timer = setTimeout(()=>{
+        P = Math.max(0, P-0.05);
+        chart.data.labels.push(chart.data.labels.length+1);
+        chart.data.datasets[0].data.push(P);
+        chart.update();
+        updateDisplay();
+        newRound();
+      }, k);
+    }
+  </script>
+</body>
+</html>
