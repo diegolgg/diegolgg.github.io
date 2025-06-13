@@ -71,7 +71,7 @@
       <p><strong>mod</strong>: value for result mod</p>
       <p><strong>sec</strong>: timeout seconds</p>
       <p>Count black tiles, enter result mod via keyboard.</p>
-      <p>Correct: P += 0.01; Wrong/timeout: P -= 0.05.</p>
+      <p>Correct: P += 0.005; Wrong/timeout: P -= 0.025.</p>
       <p>Press <strong>Space</strong> to stop and reset.</p>
     </div>
   </div>
@@ -189,7 +189,7 @@
         const actual = window.currentCount % modVal;
         const correctGuess = guess === actual;
         showFlash(correctGuess);
-        P = correctGuess ? Math.min(1, P + 0.01) : Math.max(0, P - 0.05);
+        P = correctGuess ? Math.min(1, P + 0.005) : Math.max(0, P - 0.025);
         if (P > bestP) {
           bestP = P;
           bestPdisp.textContent = bestP.toFixed(2);
