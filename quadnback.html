@@ -16,8 +16,9 @@
     .diagnostics { flex:1; padding:1rem; border-left:1px solid #ddd; overflow-y:auto; z-index:3; }
     details ul li { color:blue!important; text-decoration:underline!important; cursor:pointer; }
     footer { font-size:0.8rem; text-align:center; padding:1rem; position:relative; z-index:3; }
+    .match { outline:4px solid green; }
+    .miss  { outline:4px solid red; }
   </style>
-  <!-- Tone.js for real-time audio synthesis -->
   <script src="https://unpkg.com/tone"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -55,18 +56,17 @@
   <script>
     const synth = new Tone.Synth().toDestination();
     let n, gridSize, colorCount, toneCount, sec;
-    let sequence=[], total=0, correct=0, bestN=0;
-    const runs=[];
+    let sequence = [], total = 0, correct = 0, bestN = 0;
+    const runs = [];
     const streamsDiv = document.getElementById('streams');
     const curNspan   = document.getElementById('cur-n');
     const accSpan    = document.getElementById('accuracy');
     const bestNspan  = document.getElementById('best-n');
     const historyEl  = document.getElementById('history');
-    const flashEl    = document.getElementById('flash');
     const ctx        = document.getElementById('chart').getContext('2d');
-    const data       = { labels:[], datasets:[{ label:'Accuracy %', data:[], borderColor:'blue', fill:false }]};
-    const chart      = new Chart(ctx,{ type:'line', data, options:{ scales:{ y:{ min:0, max:100 } } } });
+    const chart      = new Chart(ctx, { type:'line', data:{labels:[],datasets:[{label:'Accuracy %',data:[],borderColor:'blue',fill:false}]}, options:{scales:{y:{min:0,max:100}}} });
     let stepTimer;
+    let currentResponses = new Set();
 
     document.getElementById('start-btn').addEventListener('click', async () => {
       await Tone.start();
@@ -77,12 +77,17 @@
       colorCount = +document.getElementById('input-colors').value;
       toneCount  = +document.getElementById('input-tones').value;
       sec        = +document.getElementById('input-sec').value * 1000;
-      sequence=[]; total=correct=0;
-      updateStats(); resetChart(); renderStreams(); nextStep();
+      sequence = [];
+      total = correct = 0;
+      updateStats();
+      resetChart();
+      renderStreams();
+      nextStep();
     });
 
     document.getElementById('howto-btn').addEventListener('click', () => {
-      const d = document.getElementById('howto'); d.style.display = d.style.display==='block'?'none':'block';
+      const d = document.getElementById('howto');
+      d.style.display = d.style.display === 'block' ? 'none' : 'block';
     });
 
     function renderStreams() {
@@ -90,79 +95,96 @@
       streamsDiv.style.gridTemplateColumns = `repeat(${gridSize}, auto)`;
       streamsDiv.style.gridTemplateRows    = `repeat(${gridSize}, auto)`;
       for(let i=0; i<gridSize*gridSize; i++){
-        const d=document.createElement('div'); d.className='stream'; d.id='s'+i; streamsDiv.append(d);
+        const d = document.createElement('div');
+        d.className = 'stream';
+        d.id = 's'+i;
+        streamsDiv.append(d);
       }
-      ['letter','color','tone'].forEach(id=>{ const d=document.createElement('div'); d.className='stream'; d.id=id; streamsDiv.append(d); });
+      ['letter','color','tone'].forEach(id => {
+        const d = document.createElement('div');
+        d.className = 'stream';
+        d.id = id;
+        streamsDiv.append(d);
+      });
     }
 
-    document.addEventListener('keydown', e=>{
-      const mapKey={'1':'pos','2':'letter','3':'color','4':'tone'}[e.key];
-      if(!mapKey) return;
-      e.preventDefault(); recordResponse(mapKey);
+    document.addEventListener('keydown', e => {
+      const mapKey = {'1':'pos','2':'letter','3':'color','4':'tone'}[e.key];
+      if(!mapKey || !sequence.length) return;
+      e.preventDefault();
+      currentResponses.add(mapKey);
     });
 
-    // buffer responses per step
-let currentResponses = new Set();
-function recordResponse(stream) {
-  // collect responses, but don’t update accuracy yet
-  currentResponses.add(stream);
-}
-      const el = stream==='pos'?document.getElementById('s'+sequence[sequence.length-1].pos):document.getElementById(stream);
-      el.classList.add(hit?'match':'miss'); setTimeout(()=>el.classList.remove('match','miss'),200);
-      // update stats but do not advance yet
-      chart.data.labels.push(++total);
-      chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1)); chart.update(); updateStats();
-    }
-
     function nextStep() {
-  // evaluate buffered responses for previous stimulus
-  if(sequence.length>1) {
-    const idx = sequence.length-2 - n;
-    for(let stream of currentResponses) {
-      let hit = (idx>=0 && sequence[sequence.length-2][stream] === sequence[idx][stream]);
-      if(hit) correct++;
-      total++;
-      // flash feedback
-      const el = stream==='pos' ? document.getElementById('s'+sequence[sequence.length-2].pos)
-                                : document.getElementById(stream);
-      el.classList.add(hit?'match':'miss');
-      setTimeout(()=>el.classList.remove('match','miss'), 200);
-      // update chart
-      chart.data.labels.push(total);
-      chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
+      // evaluate buffered responses for previous stimulus
+      if(sequence.length) {
+        const idx = sequence.length-1-n;
+        currentResponses.forEach(stream => {
+          let hit = (idx>=0 && sequence[sequence.length-1][stream] === sequence[idx][stream]);
+          if(hit) correct++;
+          total++;
+          const el = stream==='pos' ? document.getElementById('s'+sequence[sequence.length-1].pos) : document.getElementById(stream);
+          el.classList.add(hit?'match':'miss');
+          setTimeout(() => el.classList.remove('match','miss'), 200);
+          chart.data.labels.push(total);
+          chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
+        });
+        chart.update();
+      }
+      currentResponses.clear();
+      // show next stimulus
+      clearTimeout(stepTimer);
+      const pos = Math.floor(Math.random()*(gridSize*gridSize));
+      const l   = ['A','B','C','D','E','F','G','H'][Math.floor(Math.random()*8)];
+      const c   = ['red','green','blue','yellow','orange','purple','cyan','magenta'][Math.floor(Math.random()*colorCount)];
+      const t   = [220,330,440,550,660,770,880,990][Math.floor(Math.random()*toneCount)];
+      sequence.push({pos,l,c,t});
+      document.querySelectorAll('.stream').forEach(div => div.textContent='');
+      document.getElementById('s'+pos).textContent = '●';
+      document.getElementById('letter').textContent = l;
+      document.getElementById('color').style.background = c;
+      synth.triggerAttackRelease(t,'8n');
+      stepTimer = setTimeout(() => nextStep(), sec);
+    }
+
+    function updateStats() {
+      curNspan.textContent = n;
+      accSpan.textContent = total ? ((correct/total)*100).toFixed(1) + '%' : '0%';
+      bestNspan.textContent = bestN;
+    }
+
+    function resetChart() {
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
       chart.update();
-    }
-  }
-  // clear for next
-  currentResponses.clear();
-
-  clearTimeout(stepTimer);
-  const pos=Math.floor(Math.random()*(gridSize*gridSize));
-  const l=['A','B','C','D','E','F','G','H'][Math.floor(Math.random()*8)];
-  const c=['red','green','blue','yellow','orange','purple','cyan','magenta'][Math.floor(Math.random()*colorCount)];
-  const t=[220,330,440,550,660,770,880,990][Math.floor(Math.random()*toneCount)];
-  sequence.push({pos,l,c,t});
-  document.querySelectorAll('.stream').forEach(div=>div.textContent='');
-  document.getElementById('s'+pos).textContent='●';
-  document.getElementById('letter').textContent=l;
-  document.getElementById('color').style.background=c;
-  synth.triggerAttackRelease(t,'8n');
-  // schedule next evaluation after timeout
-  stepTimer=setTimeout(()=>nextStep(), sec);(()=>nextStep(), sec);
+      streamsDiv.innerHTML = '';
+      historyEl.innerHTML = '';
     }
 
-    function updateStats(){ curNspan.textContent=n; accSpan.textContent=total?((correct/total)*100).toFixed(1)+'%':'0%'; bestNspan.textContent=bestN; }
-    function resetChart(){chart.data.labels=[];chart.data.datasets[0].data=[];chart.update();streamsDiv.innerHTML='';historyEl.innerHTML='';}
-
-    function saveRun(){ const run={config:{n,gridSize,colorCount,toneCount,sec},bestN,labels:[...chart.data.labels],data:[...chart.data.datasets[0].data]};runs.push(run);
-      const li=document.createElement('li');li.textContent=`#${runs.length}: n=${n}, grid=${gridSize}, colors=${colorCount}, tones=${toneCount}, bestN=${bestN}`;li.dataset.idx=runs.length-1;historyEl.append(li);
+    function saveRun() {
+      const run = {
+        config: { n, gridSize, colorCount, toneCount, sec },
+        bestN,
+        labels: [...chart.data.labels],
+        data:   [...chart.data.datasets[0].data]
+      };
+      runs.push(run);
+      const li = document.createElement('li');
+      li.textContent = `#${runs.length}: n=${n}, grid=${gridSize}, colors=${colorCount}, tones=${toneCount}`;
+      li.dataset.idx = runs.length - 1;
+      historyEl.append(li);
     }
 
-    historyEl.addEventListener('click', e=>{
-      if(e.target.tagName==='LI'){
-        const idx=parseInt(e.target.dataset.idx,10), run=runs[idx];if(!run) return;
-        chart.data.labels=[...run.labels];chart.data.datasets[0].data=[...run.data];chart.update();
-        total=run.labels.length;correct=Math.round((run.data[run.data.length-1]/100)*total);updateStats();
+    historyEl.addEventListener('click', e => {
+      if(e.target.tagName === 'LI') {
+        const idx = parseInt(e.target.dataset.idx, 10);
+        const run = runs[idx]; if(!run) return;
+        chart.data.labels = [...run.labels];
+        chart.data.datasets[0].data = [...run.data];
+        chart.update();
+        total = run.labels.length;
+        correct = Math.round((run.data[run.data.length-1]/100)*total);
+        updateStats();
       }
     });
   </script>
