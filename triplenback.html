@@ -152,6 +152,8 @@
           chart.data.labels.push(total);
           chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
         });
+        
+        chart.update();
         acc.textContent = ((correct/total)*100).toFixed(1)+'%';
         peakEl.textContent = peak.toFixed(1)+'%';
       }
