@@ -126,14 +126,19 @@
           if(hit) correct++;
           total++;
           peak = Math.max(peak, (correct/total)*100);
-          const el = s==='pos'? document.getElementById('c'+sequence[sequence.length-1].pos)
-                               : document.getElementById(s+'Indicator');
-          el.classList.add(hit?'match':'miss');
-          setTimeout(()=>el.classList.remove('match','miss'),200);
+          // determine element or flash for tone
+          if(s==='tone'){
+            flashEl.style.background = hit ? 'rgba(0,255,0,0.3)' : 'rgba(255,0,0,0.3)';
+            flashEl.style.opacity    = 1;
+            setTimeout(()=> flashEl.style.opacity = 0, 200);
+          } else {
+            const cellEl = document.getElementById('c' + sequence[sequence.length-1].pos);
+            cellEl.classList.add(hit ? 'match' : 'miss');
+            setTimeout(() => cellEl.classList.remove('match','miss'), 200);
+          }
           chart.data.labels.push(total);
           chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
         });
-        chart.update();
         acc.textContent = ((correct/total)*100).toFixed(1)+'%';
         peakEl.textContent = peak.toFixed(1)+'%';
       }
