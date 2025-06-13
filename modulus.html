@@ -6,19 +6,22 @@
   <style>
     body { margin: 0; font-family: sans-serif; }
     .wrapper { display: flex; height: 100vh; }
-    .game, .diagnostics { padding: 1rem; }
-    .game { flex: 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-    .grid { display: grid; gap: 2px; margin-top: 1rem; }
-    .tile { width: 30px; height: 30px; background: white; border: 1px solid #ccc; }
+    .game { flex: 2; padding: 1rem; display: flex; flex-direction: column; align-items: center; }
+    #grid { display: grid; gap: 2px; margin-top: 1rem; }
+    .tile { background: white; border: 1px solid #ccc; }
     .black { background: black; }
-    .controls { display: flex; gap: 1rem; }
-    .diagnostics { flex: 1; border-left: 1px solid #ddd; }
+    .diagnostics { flex: 1; padding: 1rem; border-left: 1px solid #ddd; overflow-y: auto; }
+    #current-run { margin-bottom: 1rem; }
+    details { margin-top: 1rem; }
+    details summary { cursor: pointer; font-weight: bold; }
+    details ul { list-style: none; padding-left: 1rem; }
+    details li { margin: 0.5rem 0; cursor: pointer; color: blue; text-decoration: underline; }
     canvas { max-width: 100%; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="controls">
+  <div style="padding:1rem; background:#fafafa;">
     n: <input id="input-n" type="number" value="5" min="1" style="width:4ch">
     m: <input id="input-m" type="number" value="5" min="2" style="width:4ch">
     k (s): <input id="input-k" type="number" value="5" min="1" style="width:4ch">
@@ -27,67 +30,156 @@
   </div>
   <div class="wrapper">
     <div class="game">
-      <div id="info">P: <span id="P-display">0.5</span></div>
-      <div id="grid" class="grid"></div>
+      <div id="info">P: <span id="P-display">0.00</span></div>
+      <div id="timer">Time left: <span id="time-left">0</span>s</div>
+      <div id="grid"></div>
     </div>
     <div class="diagnostics">
-      <div>Best P: <span id="bestP">0.5</span></div>
+      <div id="current-run">
+        <strong>Current Run:</strong><br>
+        n=<span id="cur-n">–</span>, 
+        m=<span id="cur-m">–</span>, 
+        k=<span id="cur-k">–</span>s<br>
+        Best P: <span id="bestP">0.00</span>
+      </div>
       <canvas id="chart"></canvas>
+      <details>
+        <summary>Run History</summary>
+        <ul id="run-history"></ul>
+      </details>
     </div>
   </div>
+
   <script>
-    let n, m, k, P, bestP, timer, paused=false;
+    let n,m,k,P=0,bestP=0, timer, timeInterval, paused=false;
+    const runs = [];
     const gridEl = document.getElementById('grid');
     const Pdisp = document.getElementById('P-display');
     const bestPdisp = document.getElementById('bestP');
+    const timeDisp = document.getElementById('time-left');
+    const curN = document.getElementById('cur-n');
+    const curM = document.getElementById('cur-m');
+    const curK = document.getElementById('cur-k');
+    const historyEl = document.getElementById('run-history');
+
     const ctx = document.getElementById('chart').getContext('2d');
-    const data = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }] };
-    const chart = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{display:true,text:'Trial'} }, y:{ min:0, max:1 } } } });
+    let chart = new Chart(ctx, {
+      type:'line',
+      data:{ labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }]},
+      options:{ scales:{ x:{ title:{display:true,text:'Trial'} }, y:{ min:0, max:1 } } }
+    });
+
     document.getElementById('start-btn').onclick = () => {
+      if (chart.data.labels.length) saveRun();
       n = +document.getElementById('input-n').value;
       m = +document.getElementById('input-m').value;
       k = +document.getElementById('input-k').value*1000;
-      P = 0.5; bestP = P; updateDisplay(); newRound();
+      P = bestP = 0;
+      updateCurrentInfo();
+      resetChart();
+      newRound();
     };
+
     document.addEventListener('keydown', e => {
-      if (e.code==='Space') { paused=!paused; if(paused) clearTimeout(timer); else newRound(); }
-      if (!paused && e.key.match(/^\d$/)) {
+      if (e.code==='Space') {
+        paused = !paused;
+        if (paused) { clearTimeout(timer); clearInterval(timeInterval); }
+        else newRound();
+      }
+      if (!paused && e.key.match(/^\d+$/)) {
+        clearTimeout(timer); clearInterval(timeInterval);
         const guess = +e.key;
         const actual = window.currentCount % m;
-        clearTimeout(timer);
-        if (guess===actual) P = Math.min(1, P+0.01);
-        else P = Math.max(0, P-0.05);
-        if (P>bestP) { bestP=P; bestPdisp.textContent = bestP.toFixed(2); }
-        chart.data.labels.push(chart.data.labels.length+1);
-        chart.data.datasets[0].data.push(P);
-        chart.update();
-        updateDisplay();
+        if (guess===actual) P = Math.min(1,P+0.01);
+        else P = Math.max(0,P-0.05);
+        if (P>bestP) { bestP = P; bestPdisp.textContent = bestP.toFixed(2); }
+        pushChartPoint(P);
+        updateCurrentInfo();
         newRound();
       }
     });
-    function updateDisplay() {
+
+    historyEl.addEventListener('click', e => {
+      if (e.target.tagName==='LI') {
+        const idx = +e.target.dataset.idx;
+        loadRun(idx);
+      }
+    });
+
+    function updateCurrentInfo(){
       Pdisp.textContent = P.toFixed(2);
+      bestPdisp.textContent = bestP.toFixed(2);
+      curN.textContent = n;
+      curM.textContent = m;
+      curK.textContent = (k/1000).toFixed(1);
     }
+
+    function resetChart(){
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
+      chart.update();
+    }
+
+    function pushChartPoint(val){
+      chart.data.labels.push(chart.data.labels.length+1);
+      chart.data.datasets[0].data.push(val);
+      chart.update();
+    }
+
+    function saveRun(){
+      const run = {
+        config: {n,m,k:k/1000},
+        bestP,
+        labels: [...chart.data.labels],
+        data: [...chart.data.datasets[0].data]
+      };
+      runs.push(run);
+      const li = document.createElement('li');
+      li.textContent = `#${runs.length}: n=${n},m=${m},k=${run.config.k}s, bestP=${run.bestP.toFixed(2)}`;
+      li.dataset.idx = runs.length - 1;
+      historyEl.append(li);
+    }
+
+    function loadRun(idx){
+      const run = runs[idx];
+      document.getElementById('cur-n').textContent = run.config.n;
+      document.getElementById('cur-m').textContent = run.config.m;
+      document.getElementById('cur-k').textContent = run.config.k;
+      bestPdisp.textContent = run.bestP.toFixed(2);
+      chart.data.labels = [...run.labels];
+      chart.data.datasets[0].data = [...run.data];
+      chart.update();
+    }
+
     function newRound(){
-      if(paused) return;
-      gridEl.style.gridTemplateColumns = `repeat(${n},30px)`;
+      if (paused) return;
+      const avail = window.innerWidth * 0.8;
+      const size = Math.floor(avail / n);
+      gridEl.style.gridTemplateColumns = `repeat(${n},${size}px)`;
+      gridEl.style.gridTemplateRows    = `repeat(${n},${size}px)`;
       gridEl.innerHTML = '';
       let count=0;
-      for(let i=0;i<n*n;i++){
-        const div = document.createElement('div');
-        div.className='tile';
-        if(Math.random()<P){ div.classList.add('black'); count++; }
-        gridEl.append(div);
+      for (let i=0;i<n*n;i++){
+        const d=document.createElement('div');
+        d.className='tile'; d.style.width=`${size}px`; d.style.height=`${size}px`;
+        if (Math.random()<P){ d.classList.add('black'); count++; }
+        gridEl.append(d);
       }
       window.currentCount = count;
+      let timeLeft = Math.floor(k/1000);
+      timeDisp.textContent = timeLeft;
+      clearInterval(timeInterval);
+      timeInterval = setInterval(()=>{
+        timeLeft--; timeDisp.textContent = timeLeft;
+        if (timeLeft<=0) clearInterval(timeInterval);
+      },1000);
+      clearTimeout(timer);
       timer = setTimeout(()=>{
-        P = Math.max(0, P-0.05);
-        chart.data.labels.push(chart.data.labels.length+1);
-        chart.data.datasets[0].data.push(P);
-        chart.update();
-        updateDisplay();
+        P = Math.max(0,P-0.05);
+        pushChartPoint(P);
+        updateCurrentInfo();
         newRound();
-      }, k);
+      },k);
     }
   </script>
 </body>
