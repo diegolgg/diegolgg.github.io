@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Triple N-Back</n>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; height:100%; font-family:sans-serif; }
+    #toolbar { padding:1rem; background:#fafafa; position:relative; z-index:3; }
+    #howto-btn { position:absolute; top:1rem; right:1rem; }
+    .wrapper { display:flex; height: calc(100vh - 72px - 48px); }
+    .game { flex:2; display:flex; align-items:center; justify-content:center; position:relative; z-index:2; }
+    #grid { display:grid; gap:2px; }
+    .cell { width:60px; height:60px; border:1px solid #ccc; }
+    #flash { position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; opacity:0; transition:opacity 0.2s ease-out; z-index:1; }
+    #howto { display:none; position:absolute; top:50px; right:20px; background:#fff; border:1px solid #ccc; padding:1rem; width:300px; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:4; }
+    .diagnostics { flex:1; padding:1rem; border-left:1px solid #ddd; overflow-y:auto; z-index:3; }
+    footer { font-size:0.8rem; text-align:center; padding:1rem; position:relative; z-index:3; }
+    .match { outline:4px solid green; }
+    .miss  { outline:4px solid red; }
+  </style>
+  <script src="https://unpkg.com/tone"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="flash"></div>
+  <div id="toolbar">
+    n: <input id="input-n" type="number" value="2" min="1" style="width:3ch">
+    grid: <input id="input-grid" type="number" value="3" min="1" style="width:3ch">
+    colors: <input id="input-colors" type="number" value="4" min="1" max="8" style="width:3ch">
+    tones: <input id="input-tones" type="number" value="4" min="1" max="8" style="width:3ch">
+    sec: <input id="input-sec" type="number" value="2" min="1" style="width:3ch">s
+    <button id="start-btn">Start</button>
+    <button id="howto-btn">How to play</button>
+    <div id="howto">
+      <h3>Triple N-Back</h3>
+      <p>Three streams: Position (1), Color (2), Tone (3).</p>
+      <p>Adjust <strong>n</strong>, <strong>grid</strong>, <strong>colors</strong>, <strong>tones</strong>, <strong>sec</strong>, then Start.</p>
+      <p>Press keys 1–3 when current stimulus matches n-back in that stream within the time window.</p>
+      <p>Stats on right: n, accuracy, peak accuracy, time elapsed.</p>
+    </div>
+  </div>
+  <div class="wrapper">
+    <div class="game">
+      <div id="grid"></div>
+    </div>
+    <div class="diagnostics">
+      <div><strong>n:</strong> <span id="cur-n">2</span></div>
+      <div><strong>Accuracy:</strong> <span id="accuracy">0%</span></div>
+      <div><strong>Peak:</strong> <span id="peak">0%</span></div>
+      <div><strong>Time:</strong> <span id="elapsed">0.0</span>s</div>
+      <canvas id="chart"></canvas>
+      <details><summary>Run History</summary><ul id="history"></ul></details>
+    </div>
+  </div>
+  <footer>&copy; Diego Luca Gonzalez Gauss 2025</footer>
+  <script>
+    // prepare synth and chart
+    const synth = new Tone.Synth().toDestination();
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx,{ type:'line', data:{ labels:[], datasets:[{ label:'Accuracy %', data:[], borderColor:'blue', fill:false }] }, options:{ scales:{ y:{ min:0, max:100 } } } });
+
+    let n, gridSize, colorCount, toneCount, sec;
+    let sequence=[], total=0, correct=0, peak=0, startTime;
+    const runs=[];
+    const gridEl = document.getElementById('grid');
+    const curN = document.getElementById('cur-n');
+    const acc  = document.getElementById('accuracy');
+    const peakEl = document.getElementById('peak');
+    const elapsedEl = document.getElementById('elapsed');
+    const historyEl = document.getElementById('history');
+    const flashEl = document.getElementById('flash');
+
+    let stepTimer;
+    let responses = new Set();
+    let tickTimer;
+
+    document.getElementById('start-btn').onclick = async () => {
+      await Tone.start();
+      clearTimeout(stepTimer); clearInterval(tickTimer);
+      if(chart.data.labels.length) saveRun();
+      n = +document.getElementById('input-n').value;
+      gridSize = +document.getElementById('input-grid').value;
+      colorCount = +document.getElementById('input-colors').value;
+      toneCount = +document.getElementById('input-tones').value;
+      sec = +document.getElementById('input-sec').value*1000;
+      sequence=[]; total=0; correct=0; peak=0;
+      chart.data.labels=[]; chart.data.datasets[0].data=[]; chart.update();
+      historyEl.innerHTML='';
+      curN.textContent = n;
+      acc.textContent = '0%'; peakEl.textContent='0%'; elapsedEl.textContent='0.0';
+      renderGrid();
+      startTime = Date.now();
+      tickTimer = setInterval(() => { elapsedEl.textContent = ((Date.now()-startTime)/1000).toFixed(1); }, 100);
+      nextStep();
+    };
+
+    document.getElementById('howto-btn').onclick = ()=>{
+      const d = document.getElementById('howto'); d.style.display = d.style.display==='block'?'none':'block';
+    };
+
+    function renderGrid(){
+      gridEl.innerHTML='';
+      gridEl.style.gridTemplateColumns = `repeat(${gridSize},60px)`;
+      gridEl.style.gridTemplateRows    = `repeat(${gridSize},60px)`;
+      for(let i=0;i<gridSize*gridSize;i++){
+        const cell = document.createElement('div');
+        cell.className='cell'; cell.id='c'+i;
+        gridEl.append(cell);
+      }
+    }
+
+    document.addEventListener('keydown', e=>{
+      const keyMap={'1':'pos','2':'color','3':'tone'};
+      if(keyMap[e.key]){
+        responses.add(keyMap[e.key]);
+      }
+    });
+
+    function nextStep(){
+      clearTimeout(stepTimer);
+      // evaluate previous
+      if(sequence.length){
+        const idx = sequence.length-1-n;
+        responses.forEach(s=>{
+          let hit = idx>=0 && sequence[sequence.length-1][s] === sequence[idx][s];
+          if(hit) correct++;
+          total++;
+          peak = Math.max(peak, (correct/total)*100);
+          const el = s==='pos'? document.getElementById('c'+sequence[sequence.length-1].pos)
+                               : document.getElementById(s+'Indicator');
+          el.classList.add(hit?'match':'miss');
+          setTimeout(()=>el.classList.remove('match','miss'),200);
+          chart.data.labels.push(total);
+          chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
+        });
+        chart.update();
+        acc.textContent = ((correct/total)*100).toFixed(1)+'%';
+        peakEl.textContent = peak.toFixed(1)+'%';
+      }
+      responses.clear();
+      // new stimulus
+      const pos = Math.floor(Math.random()*(gridSize*gridSize));
+      const col = ['red','green','blue','yellow','orange','purple','cyan','magenta'][Math.floor(Math.random()*colorCount)];
+      const tone = [220,330,440,550,660,770,880,990][Math.floor(Math.random()*toneCount)];
+      sequence.push({ pos, color:col, tone });
+      // clear
+      document.querySelectorAll('.cell').forEach(c=>c.style.background='');
+      // apply
+      document.getElementById('c'+pos).style.background = col;
+      synth.triggerAttackRelease(tone,'8n');
+
+      stepTimer = setTimeout(()=> nextStep(), sec);
+    }
+
+    function saveRun(){
+      const run={config:{n,gridSize,colorCount,toneCount,sec},peak};
+      runs.push(run);
+      const li=document.createElement('li');
+      li.textContent = `#${runs.length}: n=${run.config.n}, grid=${run.config.gridSize}, colors=${run.config.colorCount}, tones=${run.config.toneCount}, peak=${run.peak.toFixed(1)}%`;
+      li.dataset.idx = runs.length-1;
+      historyEl.append(li);
+    }
+
+    historyEl.addEventListener('click', e=>{
+      if(e.target.tagName==='LI'){
+        const r = runs[+e.target.dataset.idx];
+        alert(`Run ${+e.target.dataset.idx+1}\npeak: ${r.peak.toFixed(1)}%`);
+      }
+    });
+  </script>
+</body>
+</html>
