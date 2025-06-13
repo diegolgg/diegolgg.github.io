@@ -2,263 +2,244 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Modulus</title>
+  <title>Triple N-Back</title>
   <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    height: 100%;
-  }
-  body { font-family: sans-serif; }
-  #toolbar { padding:1rem; background:#fafafa; position: relative; z-index:3; }
-  #howto-btn { position: absolute; top:1rem; right:1rem; }
-  .wrapper { display: flex; height: calc(100vh - 72px - 48px); }
-  .game { flex: 2; padding: 1rem; display: flex; flex-direction: column; align-items: center; position: relative; z-index:2; }
-  #grid { display: grid; gap: 2px; margin-top: 1rem; }
-  .tile { background: white; border: 1px solid #ccc; position: relative; z-index:2; }
-  .black { background: black; }
-  .diagnostics { flex: 1; padding: 1rem; border-left: 1px solid #ddd; overflow-y: auto; z-index:3; }
-  canvas { max-width: 100%; }
-  details ul li { color: blue !important; text-decoration: underline !important; cursor: pointer; }
-  #howto {
-  display: none;
-  position: absolute;
-  top: 50px;
-  right: 20px;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  padding: 1rem;
-  width: 300px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  z-index: 4;
-  opacity: 1 !important;
-}
-  #flash {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease-out;
-    z-index:1;
-  }
-  footer {
-    font-size:0.8rem;
-    text-align:center;
-    padding:1rem;
-    position: relative;
-    z-index:3;
-  }
-</style>
+    html, body { margin:0; padding:0; overflow:hidden; height:100%; font-family:sans-serif; }
+    #toolbar { padding:1rem; background:#fafafa; position:relative; z-index:3; }
+    #howto-btn { position:absolute; top:1rem; right:1rem; }
+    .wrapper { display:flex; height: calc(100vh - 72px - 48px); }
+    .game { flex:2; display:flex; align-items:center; justify-content:center; position:relative; z-index:2; }
+    #grid { display:grid; gap:2px; }
+    .cell { width:60px; height:60px; border:1px solid #ccc; }
+    #flash { position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; opacity:0; transition:opacity 0.2s ease-out; z-index:1; }
+    #howto {
+      display:none; position:absolute; top:50px; right:20px;
+      background:#fff; border:1px solid #ccc; padding:1rem; width:300px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:4;
+    }
+    .diagnostics { flex:1; padding:1rem; border-left:1px solid #ddd; overflow-y:auto; z-index:3; }
+    .match { outline:4px solid green; }
+    .miss  { outline:4px solid red; }
+    footer { font-size:0.8rem; text-align:center; padding:1rem; position:relative; z-index:3; }
+  </style>
+  <!-- Tone.js for audio synthesis -->
+  <script src="https://unpkg.com/tone"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div id="flash"></div>
+
+  <!-- Toolbar -->
   <div id="toolbar">
-    n: <input id="input-n" type="number" value="5" min="1" style="width:4ch">
-    m: <input id="input-m" type="number" value="5" min="1" style="width:4ch">
-    mod: <input id="input-mod" type="number" value="5" min="1" max="10" style="width:4ch">
-    sec: <input id="input-sec" type="number" value="5" min="1" style="width:4ch">
+    n: <input id="input-n" type="number" value="2" min="1" style="width:3ch">
+    grid: <input id="input-grid" type="number" value="3" min="1" style="width:3ch">
+    colors: <input id="input-colors" type="number" value="4" min="1" max="8" style="width:3ch">
+    tones: <input id="input-tones" type="number" value="4" min="1" max="8" style="width:3ch">
+    sec: <input id="input-sec" type="number" value="2" min="1" style="width:3ch">s
     <button id="start-btn">Start</button>
-    <span>Press space to stop</span>
     <button id="howto-btn">How to play</button>
+
     <div id="howto">
-      <h3>How to play</h3>
-      <p><strong>n</strong>: number of columns</p>
-      <p><strong>m</strong>: number of rows</p>
-      <p><strong>mod</strong>: value for result mod</p>
-      <p><strong>sec</strong>: timeout seconds</p>
-      <p>Count black tiles, enter result mod via keyboard.</p>
-      <p>Correct: P += 0.01; Wrong/timeout: P -= 0.05.</p>
-      <p>Press <strong>Space</strong> to stop and reset.</p>
+      <h3>Triple N-Back</h3>
+      <p>Three streams: Position (1), Color (2), Tone (3).</p>
+      <p>Adjust <strong>n</strong>, <strong>grid</strong>, <strong>colors</strong>, <strong>tones</strong>, <strong>sec</strong>, then Start.</p>
+      <p>Press keys 1–3 when current stimulus matches n-back in that stream within the time window.</p>
+      <p>Stats on right: n, accuracy, peak accuracy, time elapsed.</p>
     </div>
   </div>
+
+  <!-- Main content -->
   <div class="wrapper">
     <div class="game">
-      <div id="info">P: <span id="P-display">0.00</span></div>
-      <div id="timer">Time left: <span id="time-left">0</span>s</div>
       <div id="grid"></div>
     </div>
     <div class="diagnostics">
-      <div id="current-run">
-        <strong>Current Run:</strong><br>
-        n=<span id="cur-n">–</span>, m=<span id="cur-m">–</span>, mod=<span id="cur-mod">–</span>, sec=<span id="cur-sec">–</span>s<br>
-        Best P: <span id="bestP">0.00</span>
-      </div>
+      <div><strong>n:</strong> <span id="cur-n">2</span></div>
+      <div><strong>Accuracy:</strong> <span id="accuracy">0%</span></div>
+      <div><strong>Peak:</strong> <span id="peak">0%</span></div>
+      <div><strong>Time:</strong> <span id="elapsed">0.0</span>s</div>
       <canvas id="chart"></canvas>
-      <details>
-        <summary>Run History</summary>
-        <ul id="run-history"></ul>
-      </details>
-      <button id="clear-history">Clear History</button>
+      <details><summary>Run History</summary><ul id="history"></ul></details>
     </div>
   </div>
-  <footer>
-    Thought of by Alexey Slizkov and Dale Jacobs<br>
-    &copy; Diego Luca Gonzalez Gauss 2025
-  </footer>
+
+  <footer>&copy; Diego Luca Gonzalez Gauss 2025</footer>
+
   <script>
-    let n, m, modVal, sec, P=0, bestP=0, timer, timeInterval;
-    const runs = JSON.parse(localStorage.getItem('modulusRuns') || '[]');
-
-runs.forEach((run, idx) => {
-  const li = document.createElement('li');
-  li.textContent = `#${idx+1}: n=${run.config.n}, m=${run.config.m}, mod=${run.config.mod}, sec=${run.config.sec}s, bestP=${run.bestP.toFixed(2)}`;
-  li.dataset.idx = idx;
-  historyEl.append(li);
-});
-    const gridEl     = document.getElementById('grid');
-    const Pdisp      = document.getElementById('P-display');
-    const bestPdisp  = document.getElementById('bestP');
-    const timeDisp   = document.getElementById('time-left');
-    const curN       = document.getElementById('cur-n');
-    const curM       = document.getElementById('cur-m');
-    const curMod     = document.getElementById('cur-mod');
-    const curSec     = document.getElementById('cur-sec');
-    const historyEl  = document.getElementById('run-history');
-    const flashEl    = document.getElementById('flash');
-    const ctx        = document.getElementById('chart').getContext('2d');
-    const data       = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }]};
-    const chart      = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{ display:true, text:'Trial'} }, y:{ min:0, max:1 } } } });
-
-    document.getElementById('start-btn').addEventListener('click', () => {
-  clearTimeout(timer);
-  clearInterval(timeInterval);
-
-  const nVal    = parseInt(document.getElementById('input-n').value,   10);
-  const mVal    = parseInt(document.getElementById('input-m').value,   10);
-  const modIn   = parseInt(document.getElementById('input-mod').value, 10);
-  const secIn   = parseInt(document.getElementById('input-sec').value, 10);
-
-  if (
-    isNaN(nVal) || nVal <= 0 ||
-    isNaN(mVal) || mVal <= 0 ||
-    isNaN(modIn) || modIn <= 0 ||
-    isNaN(secIn) || secIn <= 0
-  ) {
-    alert('Please enter positive numbers for n, m, mod and sec.');
-    return;
-  }
-
-  n      = nVal;
-  m      = mVal;
-  modVal = modIn;
-  sec    = secIn * 1000;
-  P = bestP = 0;
-
-  updateCurrentInfo();
-  resetChart();
-  newRound();
-});
-
-    document.getElementById('howto-btn').addEventListener('click', ()=>{
-      const d=document.getElementById('howto');
-      d.style.display=(d.style.display==='none'||!d.style.display)?'block':'none';
+    // Audio & chart setup
+    const synth = new Tone.Synth().toDestination();
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Accuracy %', data: [], borderColor: 'blue', fill: false }] },
+      options: { scales: { y: { min: 0, max: 100 } } }
     });
 
-    document.addEventListener('keydown', e=>{
-      if (document.activeElement.tagName === 'INPUT') return;
-      if(e.code==='Space'){
+    // State variables
+    let n, gridSize, colorCount, toneCount, sec;
+    let sequence = [], total = 0, correct = 0, peak = 0;
+    let startTime, elapsedInterval, stepTimer;
+    const runs = [];
+    const responses = new Set();
+
+    // DOM refs
+    const gridEl     = document.getElementById('grid');
+    const curN       = document.getElementById('cur-n');
+    const accSpan    = document.getElementById('accuracy');
+    const peakSpan   = document.getElementById('peak');
+    const elapsedEl  = document.getElementById('elapsed');
+    const historyEl  = document.getElementById('history');
+    const flashEl    = document.getElementById('flash');
+
+    // Start button
+    document.getElementById('start-btn').onclick = async () => {
+      await Tone.start();
+      clearTimeout(stepTimer);
+      clearInterval(elapsedInterval);
+      // Capture previous run
+      if (total > 0) saveRun();
+
+      // Read inputs
+      n = +document.getElementById('input-n').value;
+      gridSize = +document.getElementById('input-grid').value;
+      colorCount = +document.getElementById('input-colors').value;
+      toneCount = +document.getElementById('input-tones').value;
+      sec = +document.getElementById('input-sec').value * 1000;
+
+      // Reset state
+      sequence = []; total = correct = peak = 0;
+      chart.data.labels = []; chart.data.datasets[0].data = []; chart.update();
+      historyEl.innerHTML = '';
+      curN.textContent = n;
+      accSpan.textContent = '0%';
+      peakSpan.textContent = '0%';
+      elapsedEl.textContent = '0.0';
+
+      // Setup grid & timers
+      renderGrid();
+      startTime = Date.now();
+      elapsedInterval = setInterval(() => {
+        elapsedEl.textContent = ((Date.now() - startTime)/1000).toFixed(1);
+      }, 100);
+
+      nextStep();
+    };
+
+    // How-to toggle
+    document.getElementById('howto-btn').onclick = () => {
+      const d = document.getElementById('howto');
+      d.style.display = d.style.display === 'block' ? 'none' : 'block';
+    };
+
+    // Render grid cells
+    function renderGrid() {
+      gridEl.innerHTML = '';
+      gridEl.style.gridTemplateColumns = `repeat(${gridSize},60px)`;
+      gridEl.style.gridTemplateRows    = `repeat(${gridSize},60px)`;
+      for (let i = 0; i < gridSize*gridSize; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.id = 'c'+i;
+        gridEl.append(cell);
+      }
+    }
+
+    // Key responses
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space') {
+        // Pause & reset
         e.preventDefault();
-        clearTimeout(timer); clearInterval(timeInterval);
-        if(chart.data.labels.length) saveRun();
-        resetChart();
+        clearTimeout(stepTimer);
+        clearInterval(elapsedInterval);
+        saveRun();
+        sequence = [];
+        chart.data.labels=[]; chart.data.datasets[0].data=[]; chart.update();
+        historyEl.innerHTML = '';
         return;
       }
-      if(e.key.match(/^\d+$/)){
+      const map = {'1':'pos','2':'color','3':'tone'};
+      if (map[e.key] && sequence.length) {
         e.preventDefault();
-        clearTimeout(timer); clearInterval(timeInterval);
-        const guess=+e.key;
-        const actual=window.currentCount%modVal;
-        const correct=(guess===actual);
-        showFlash(correct);
-        if(correct) P=Math.min(1,P+0.01); else P=Math.max(0,P-0.05);
-        if(P>bestP){bestP=P;bestPdisp.textContent=bestP.toFixed(2);} pushChartPoint(P); updateCurrentInfo(); newRound();
+        responses.add(map[e.key]);
       }
     });
 
-    historyEl.addEventListener('click', e=>{ if(e.target.tagName==='LI') loadRun(+e.target.dataset.idx); });
+    // Advance to next step
+    function nextStep() {
+      clearTimeout(stepTimer);
 
-    function showFlash(correct){
-      flashEl.style.background = correct?'rgba(0,255,0,0.3)':'rgba(255,0,0,0.3)';
-      flashEl.style.opacity    = 1;
-      setTimeout(()=>flashEl.style.opacity = 0, 200);
-    }
+      // Evaluate buffered responses
+      if (sequence.length) {
+        const idx = sequence.length - 1 - n;
+        responses.forEach(s => {
+          const hit = idx >= 0 && sequence[sequence.length-1][s] === sequence[idx][s];
+          if (hit) correct++;
+          total++;
+          peak = Math.max(peak, (correct/total)*100);
 
-    function updateCurrentInfo(){
-      Pdisp.textContent     = P.toFixed(2);
-      bestPdisp.textContent = bestP.toFixed(2);
-      curN.textContent      = n;
-      curM.textContent      = m;
-      curMod.textContent    = modVal;
-      curSec.textContent    = sec/1000;
-    }
+          // Flash feedback
+          if (s === 'tone') {
+            flashEl.style.background = hit ? 'rgba(0,255,0,0.3)' : 'rgba(255,0,0,0.3)';
+            flashEl.style.opacity = 1;
+            setTimeout(() => flashEl.style.opacity = 0, 200);
+          } else {
+            const el = (s === 'pos')
+              ? document.getElementById('c'+sequence[sequence.length-1].pos)
+              : document.getElementById('c'+sequence[sequence.length-1].pos);
+            el.classList.add(hit ? 'match' : 'miss');
+            setTimeout(() => el.classList.remove('match','miss'), 200);
+          }
 
-    function resetChart(){
-      chart.data.labels=[];
-      chart.data.datasets[0].data=[];
-      chart.update();
-      gridEl.innerHTML='';
-    }
-
-    function pushChartPoint(val){
-      chart.data.labels.push(chart.data.labels.length+1);
-      chart.data.datasets[0].data.push(val);
-      chart.update();
-    }
-
-    function saveRun(){
-      const run={ config:{n,m,mod:modVal,sec:sec/1000}, bestP, labels:[...chart.data.labels], data:[...chart.data.datasets[0].data] };
-      runs.push(run);
-      localStorage.setItem('modulusRuns', JSON.stringify(runs));
-      const li=document.createElement('li');
-      li.textContent=`#${runs.length}: n=${n}, m=${m}, mod=${modVal}, sec=${(sec/1000)}s, bestP=${bestP.toFixed(2)}`;
-      li.dataset.idx=runs.length-1; historyEl.append(li);
-    }
-
-    function loadRun(idx){
-      const run=runs[idx];
-      curN.textContent      = run.config.n;
-      curM.textContent      = run.config.m;
-      curMod.textContent    = run.config.mod;
-      curSec.textContent    = run.config.sec;
-      bestPdisp.textContent = run.bestP.toFixed(2);
-      chart.data.labels     = [...run.labels];
-      chart.data.datasets[0].data = [...run.data]; chart.update();
-    }
-
-    function newRound(){
-      const availW=window.innerWidth*0.66;
-      const availH=(window.innerHeight-80)*0.66;
-      const size=Math.min(Math.floor(availW/n),Math.floor(availH/m));
-      gridEl.style.gridTemplateColumns=`repeat(${n},${size}px)`;
-      gridEl.style.gridTemplateRows   =`repeat(${m},${size}px)`;
-      gridEl.innerHTML=''; let count=0;
-      for(let i=0;i<n*m;i++){
-        const d=document.createElement('div');
-        d.className='tile'; d.style.width=`${size}px`; d.style.height=`${size}px`;
-        if(Math.random()<P){d.classList.add('black');count++;}
-        gridEl.append(d);
+          chart.data.labels.push(total);
+          chart.data.datasets[0].data.push(((correct/total)*100).toFixed(1));
+        });
+        chart.update();
+        accSpan.textContent = ((correct/total)*100).toFixed(1) + '%';
+        peakSpan.textContent = peak.toFixed(1) + '%';
       }
-      window.currentCount=count;
-      let timeLeft=Math.floor(sec/1000); timeDisp.textContent=timeLeft;
-      clearInterval(timeInterval);
-      timeInterval=setInterval(()=>{timeLeft--; timeDisp.textContent=timeLeft; if(timeLeft<=0)clearInterval(timeInterval);},1000);
-      clearTimeout(timer);
-      timer=setTimeout(()=>{showFlash(false);P=Math.max(0,P-0.05);pushChartPoint(P);updateCurrentInfo();newRound();},sec);
+      responses.clear();
+
+      // Generate new stimulus
+      const pos  = Math.floor(Math.random()*(gridSize*gridSize));
+      const col  = ['red','green','blue','yellow','orange','purple','cyan','magenta']
+                    [Math.floor(Math.random()*colorCount)];
+      const tone = [220,330,440,550,660,770,880,990]
+                    [Math.floor(Math.random()*toneCount)];
+
+      sequence.push({ pos, color: col, tone });
+
+      // Clear & apply
+      document.querySelectorAll('.cell').forEach(c => c.style.background = '');
+      document.getElementById('c'+pos).style.background = col;
+      synth.triggerAttackRelease(tone, '8n');
+
+      // Schedule next
+      stepTimer = setTimeout(nextStep, sec);
     }
-    
-    document
-  .getElementById('clear-history')
-  .addEventListener('click', () => {
-    runs.length = 0;                        // clear array
-    localStorage.removeItem('modulusRuns'); // clear storage
-    historyEl.innerHTML = '';               // clear UI list
-    resetChart();                           // clear chart & grid
-  });
+
+    // Save run to history
+    function saveRun() {
+      if (total === 0) return;
+      const run = { config:{n,gridSize,colorCount,toneCount,sec}, peak };
+      runs.push(run);
+      const li = document.createElement('li');
+      li.textContent = `#${runs.length}: n=${n}, grid=${gridSize}, colors=${colorCount}, tones=${toneCount}, peak=${peak.toFixed(1)}%`;
+      li.dataset.idx = runs.length - 1;
+      historyEl.append(li);
+    }
+
+    // History click: show alert with details
+    historyEl.addEventListener('click', e => {
+      if (e.target.tagName === 'LI') {
+        const idx = +e.target.dataset.idx;
+        const r = runs[idx];
+        alert(
+          `Run ${idx+1}\n` +
+          `n=${r.config.n}, grid=${r.config.gridSize}, colors=${r.config.colorCount}, tones=${r.config.toneCount}\n` +
+          `peak=${r.peak.toFixed(1)}%`
+        );
+      }
+    });
   </script>
 </body>
 </html>
