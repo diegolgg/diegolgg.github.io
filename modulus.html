@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <title>Modulus</title>
   <style>
-    html, body { margin: 0; padding: 0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* prevent scrolling */
+      height: 100%;
+    }
     body { font-family: sans-serif; }
     #toolbar { padding:1rem; background:#fafafa; position: relative; z-index:3; }
     #howto-btn { position: absolute; top:1rem; right:1rem; }
@@ -15,12 +20,28 @@
     .black { background: black; }
     .diagnostics { flex: 1; padding: 1rem; border-left: 1px solid #ddd; overflow-y: auto; z-index:3; }
     #flash {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      pointer-events: none; opacity: 0; transition: opacity 0.2s ease-out;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-out;
       z-index:1;
     }
-    #howto { display:none; position:absolute; top:50px; right:20px; background:white;
-      border:1px solid #ccc; padding:1rem; width:300px; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:4; }
+    #howto {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 20px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      width: 300px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index:4;
+    }
     footer { font-size:0.8rem; text-align:center; padding:1rem; position: relative; z-index:3; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -70,8 +91,8 @@
     &copy; Diego Luca Gonzalez Gauss 2025
   </footer>
   <script>
-    let n, m, modVal, sec, P = 0, bestP = 0, timer, timeInterval;
-    const runs = [];
+    let n, m, modVal, sec, P=0, bestP=0, timer, timeInterval;
+    const runs=[];
     const gridEl     = document.getElementById('grid');
     const Pdisp      = document.getElementById('P-display');
     const bestPdisp  = document.getElementById('bestP');
@@ -83,144 +104,112 @@
     const historyEl  = document.getElementById('run-history');
     const flashEl    = document.getElementById('flash');
     const ctx        = document.getElementById('chart').getContext('2d');
-    const data       = { labels: [], datasets: [{ label: 'P over trials', data: [], borderColor: 'blue', fill: false }] };
-    const chart      = new Chart(ctx, { type: 'line', data, options: { scales: { x: { title: { display: true, text: 'Trial' } }, y: { min: 0, max: 1 } } } });
+    const data       = { labels:[], datasets:[{ label:'P over trials', data:[], borderColor:'blue', fill:false }]};
+    const chart      = new Chart(ctx, { type:'line', data, options:{ scales:{ x:{ title:{ display:true, text:'Trial'} }, y:{ min:0, max:1 } } } });
 
-    document.getElementById('start-btn').addEventListener('click', () => {
-      clearTimeout(timer);
-      clearInterval(timeInterval);
-      if (chart.data.labels.length) saveRun();
+    document.getElementById('start-btn').addEventListener('click', ()=>{
+      clearTimeout(timer); clearInterval(timeInterval);
+      if(chart.data.labels.length) saveRun();
       n      = +document.getElementById('input-n').value;
       m      = +document.getElementById('input-m').value;
       modVal = +document.getElementById('input-mod').value;
-      sec    = +document.getElementById('input-sec').value * 1000;
-      P = bestP = 0;
-      updateCurrentInfo();
-      resetChart();
-      newRound();
+      sec    = +document.getElementById('input-sec').value *1000;
+      P=bestP=0; updateCurrentInfo(); resetChart(); newRound();
     });
 
-    document.getElementById('howto-btn').addEventListener('click', () => {
-      const d = document.getElementById('howto');
-      d.style.display = (d.style.display === 'none' || !d.style.display) ? 'block' : 'none';
+    document.getElementById('howto-btn').addEventListener('click', ()=>{
+      const d=document.getElementById('howto');
+      d.style.display=(d.style.display==='none'||!d.style.display)?'block':'none';
     });
 
-    document.addEventListener('keydown', e => {
-      if (e.code === 'Space') {
+    document.addEventListener('keydown', e=>{
+      if(e.code==='Space'){
         e.preventDefault();
-        clearTimeout(timer);
-        clearInterval(timeInterval);
-        if (chart.data.labels.length) saveRun();
+        clearTimeout(timer); clearInterval(timeInterval);
+        if(chart.data.labels.length) saveRun();
         resetChart();
         return;
       }
-      if (e.key.match(/^\d+$/)) {
+      if(e.key.match(/^\d+$/)){
         e.preventDefault();
-        clearTimeout(timer);
-        clearInterval(timeInterval);
-        const guess   = +e.key;
-        const actual  = window.currentCount % modVal;
-        const correct = (guess === actual);
+        clearTimeout(timer); clearInterval(timeInterval);
+        const guess=+e.key;
+        const actual=window.currentCount%modVal;
+        const correct=(guess===actual);
         showFlash(correct);
-        if (correct) P = Math.min(1, P + 0.01);
-        else          P = Math.max(0, P - 0.05);
-        if (P > bestP) { bestP = P; bestPdisp.textContent = bestP.toFixed(2); }
-        pushChartPoint(P);
-        updateCurrentInfo();
-        newRound();
+        if(correct) P=Math.min(1,P+0.01); else P=Math.max(0,P-0.05);
+        if(P>bestP){bestP=P;bestPdisp.textContent=bestP.toFixed(2);} pushChartPoint(P); updateCurrentInfo(); newRound();
       }
     });
 
-    historyEl.addEventListener('click', e => {
-      if (e.target.tagName === 'LI') loadRun(+e.target.dataset.idx);
-    });
+    historyEl.addEventListener('click', e=>{ if(e.target.tagName==='LI') loadRun(+e.target.dataset.idx); });
 
-    function showFlash(correct) {
-      flashEl.style.background = correct ? 'rgba(0,255,0,0.3)' : 'rgba(255,0,0,0.3)';
+    function showFlash(correct){
+      flashEl.style.background = correct?'rgba(0,255,0,0.3)':'rgba(255,0,0,0.3)';
       flashEl.style.opacity    = 1;
-      setTimeout(() => flashEl.style.opacity = 0, 200);
+      setTimeout(()=>flashEl.style.opacity = 0, 200);
     }
 
-    function updateCurrentInfo() {
+    function updateCurrentInfo(){
       Pdisp.textContent     = P.toFixed(2);
       bestPdisp.textContent = bestP.toFixed(2);
       curN.textContent      = n;
       curM.textContent      = m;
       curMod.textContent    = modVal;
-      curSec.textContent    = sec / 1000;
+      curSec.textContent    = sec/1000;
     }
 
-    function resetChart() {
-      chart.data.labels          = [];
-      chart.data.datasets[0].data = [];
+    function resetChart(){
+      chart.data.labels=[];
+      chart.data.datasets[0].data=[];
       chart.update();
-      gridEl.innerHTML           = '';
+      gridEl.innerHTML='';
     }
 
-    function pushChartPoint(val) {
-      chart.data.labels.push(chart.data.labels.length + 1);
+    function pushChartPoint(val){
+      chart.data.labels.push(chart.data.labels.length+1);
       chart.data.datasets[0].data.push(val);
       chart.update();
     }
 
-    function saveRun() {
-      const run = {
-        config: { n, m, mod: modVal, sec: sec / 1000 },
-        bestP,
-        labels: [...chart.data.labels],
-        data:   [...chart.data.datasets[0].data]
-      };
+    function saveRun(){
+      const run={ config:{n,m,mod:modVal,sec:sec/1000}, bestP, labels:[...chart.data.labels], data:[...chart.data.datasets[0].data] };
       runs.push(run);
-      const li = document.createElement('li');
-      li.textContent     = `#${runs.length}: n=${n}, m=${m}, mod=${modVal}, sec=${(sec/1000)}s, bestP=${bestP.toFixed(2)}`;
-      li.dataset.idx     = runs.length - 1;
-      historyEl.append(li);
+      const li=document.createElement('li');
+      li.textContent=`#${runs.length}: n=${n}, m=${m}, mod=${modVal}, sec=${(sec/1000)}s, bestP=${bestP.toFixed(2)}`;
+      li.dataset.idx=runs.length-1; historyEl.append(li);
     }
 
-    function loadRun(idx) {
-      const run = runs[idx];
+    function loadRun(idx){
+      const run=runs[idx];
       curN.textContent      = run.config.n;
       curM.textContent      = run.config.m;
       curMod.textContent    = run.config.mod;
       curSec.textContent    = run.config.sec;
       bestPdisp.textContent = run.bestP.toFixed(2);
       chart.data.labels     = [...run.labels];
-      chart.data.datasets[0].data = [...run.data];
-      chart.update();
+      chart.data.datasets[0].data = [...run.data]; chart.update();
     }
 
-    function newRound() {
-      const availW = window.innerWidth * 0.66;
-      const availH = (window.innerHeight - 80) * 0.66;
-      const size   = Math.min(Math.floor(availW / n), Math.floor(availH / m));
-      gridEl.style.gridTemplateColumns = `repeat(${n}, ${size}px)`;
-      gridEl.style.gridTemplateRows    = `repeat(${m}, ${size}px)`;
-      let count = 0;
-      for (let i = 0; i < n * m; i++) {
-        const d = document.createElement('div');
-        d.className    = 'tile';
-        d.style.width  = `${size}px`;
-        d.style.height = `${size}px`;
-        if (Math.random() < P) { d.classList.add('black'); count++; }
+    function newRound(){
+      const availW=window.innerWidth*0.66;
+      const availH=(window.innerHeight-80)*0.66;
+      const size=Math.min(Math.floor(availW/n),Math.floor(availH/m));
+      gridEl.style.gridTemplateColumns=`repeat(${n},${size}px)`;
+      gridEl.style.gridTemplateRows   =`repeat(${m},${size}px)`;
+      gridEl.innerHTML=''; let count=0;
+      for(let i=0;i<n*m;i++){
+        const d=document.createElement('div');
+        d.className='tile'; d.style.width=`${size}px`; d.style.height=`${size}px`;
+        if(Math.random()<P){d.classList.add('black');count++;}
         gridEl.append(d);
       }
-      window.currentCount = count;
-      let timeLeft     = Math.floor(sec / 1000);
-      timeDisp.textContent = timeLeft;
+      window.currentCount=count;
+      let timeLeft=Math.floor(sec/1000); timeDisp.textContent=timeLeft;
       clearInterval(timeInterval);
-      timeInterval = setInterval(() => {
-        timeLeft--;
-        timeDisp.textContent = timeLeft;
-        if (timeLeft <= 0) clearInterval(timeInterval);
-      }, 1000);
+      timeInterval=setInterval(()=>{timeLeft--; timeDisp.textContent=timeLeft; if(timeLeft<=0)clearInterval(timeInterval);},1000);
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        showFlash(false);
-        P = Math.max(0, P - 0.05);
-        pushChartPoint(P);
-        updateCurrentInfo();
-        newRound();
-      }, sec);
+      timer=setTimeout(()=>{showFlash(false);P=Math.max(0,P-0.05);pushChartPoint(P);updateCurrentInfo();newRound();},sec);
     }
   </script>
 </body>
