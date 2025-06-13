@@ -110,23 +110,24 @@
     }
 
     document.addEventListener('keydown', e => {
-      // Pause (Space) stops and resets
-      if (e.code === 'Space') {
-        e.preventDefault();
-        clearTimeout(stepTimer);
-        clearInterval(tickTimer);
-        // save current run history before reset
-        if (total > 0) saveRun();
-        responses.clear();
-        resetChart();
-        return;
-      }
-      }
-      const mapKey = {'1':'pos','2':'color','3':'tone'}[e.key];
-      if(!mapKey || !sequence.length) return;
-      e.preventDefault();
-      responses.add(mapKey);
-    });
+  // Pause (Space) stops and resets
+  if (e.code === 'Space') {
+    e.preventDefault();
+    clearTimeout(stepTimer);
+    clearInterval(tickTimer);
+    if (total > 0) saveRun();
+    responses.clear();
+    resetChart();
+    return;
+  }
+
+  // Now handle 1/2/3 presses
+  const mapKey = {'1':'pos','2':'color','3':'tone'}[e.key];
+  if (!mapKey || !sequence.length) return;
+
+  e.preventDefault();
+  responses.add(mapKey);
+});
 
     function nextStep(){
       clearTimeout(stepTimer);
