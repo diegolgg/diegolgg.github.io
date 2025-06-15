@@ -142,7 +142,7 @@
       acc.textContent    = ((correct/total)*100).toFixed(1) + '%';
       peakEl.textContent = peak.toFixed(1) + '%';
     }
-    
+     
         responses.forEach(s=>{
           let hit = idx>=0 && sequence[sequence.length-1][s] === sequence[idx][s];
           if(hit) correct++;
